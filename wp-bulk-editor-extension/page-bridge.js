@@ -428,22 +428,39 @@
     }
   }
 
-  function fileDestinationLabel(url, fallbackText) {
-    let filename = '';
-
+  function imageFilenameFromUrl(url) {
     try {
       const parsed = new URL(url, window.location.href);
-      filename = decodeURIComponent((parsed.pathname.split('/').filter(Boolean).pop() || '').replace(/\.[^.]+$/, ''));
+      return decodeURIComponent(parsed.pathname.split('/').filter(Boolean).pop() || '');
     } catch (_error) {
-      filename = '';
+      return '';
     }
+  }
 
-    const cleaned = (filename || fallbackText || 'image')
+  function fileDestinationLabel(url, fallbackText) {
+    const filename = imageFilenameFromUrl(url);
+    const cleanedFallback = (fallbackText || '')
+      .replace(/<[^>]+>/g, ' ')
       .replace(/[-_]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+    const destination = filename || cleanedFallback || 'image file';
 
-    return 'Download full-size image: ' + cleaned;
+    return 'Download full-size image: ' + destination;
+  }
+
+  function linkedImageHrefFromAttributes(attrs) {
+    const href = attrs.href || attrs.linkUrl || attrs.linkDestinationUrl || '';
+
+    if (href && isImageFileUrl(href)) {
+      return href;
+    }
+
+    if (attrs.linkDestination === 'media' && attrs.url && isImageFileUrl(attrs.url)) {
+      return attrs.url;
+    }
+
+    return '';
   }
 
   function setLinkedImageAltToDestination() {
@@ -451,29 +468,64 @@
       return { ok: false, message: 'Open this on a WordPress block editor page first.' };
     }
 
-    const imageBlocks = collectBlocks(getEditorBlocks(), (block) => block.name === 'core/image');
+    const blocks = collectBlocks(getEditorBlocks(), () => true);
     const changes = [];
     const skipped = [];
+    let candidateCount = 0;
 
-    imageBlocks.forEach((block) => {
+    blocks.forEach((block) => {
       const attrs = block.attributes || {};
-      const href = attrs.href || attrs.linkUrl || '';
 
-      if (!href || !isImageFileUrl(href)) {
+      if (block.name === 'core/image') {
+        const href = linkedImageHrefFromAttributes(attrs);
+
+        if (!href) {
+          return;
+        }
+
+        candidateCount += 1;
+        const nextAlt = fileDestinationLabel(href, attrs.title || attrs.caption || attrs.alt);
+
+        if ((attrs.alt || '') === nextAlt) {
+          skipped.push(nextAlt);
+          return;
+        }
+
+        window.wp.data.dispatch('core/block-editor').updateBlockAttributes(block.clientId, {
+          alt: nextAlt
+        });
+        changes.push(nextAlt);
         return;
       }
 
-      const nextAlt = fileDestinationLabel(href, attrs.title || attrs.caption || attrs.alt);
+      if (block.name === 'core/gallery' && Array.isArray(attrs.images)) {
+        let changedImages = false;
+        const nextImages = attrs.images.map((image) => {
+          const href = linkedImageHrefFromAttributes(image || {});
 
-      if ((attrs.alt || '') === nextAlt) {
-        skipped.push(nextAlt);
-        return;
+          if (!href) {
+            return image;
+          }
+
+          candidateCount += 1;
+          const nextAlt = fileDestinationLabel(href, image.title || image.caption || image.alt);
+
+          if ((image.alt || '') === nextAlt) {
+            skipped.push(nextAlt);
+            return image;
+          }
+
+          changedImages = true;
+          changes.push(nextAlt);
+          return { ...image, alt: nextAlt };
+        });
+
+        if (changedImages) {
+          window.wp.data.dispatch('core/block-editor').updateBlockAttributes(block.clientId, {
+            images: nextImages
+          });
+        }
       }
-
-      window.wp.data.dispatch('core/block-editor').updateBlockAttributes(block.clientId, {
-        alt: nextAlt
-      });
-      changes.push(nextAlt);
     });
 
     return {
@@ -482,8 +534,10 @@
       details: changes.length
         ? changes.map((value) => 'Alt: ' + value).join('\n')
         : skipped.length
-          ? 'Linked image alt text was already set for ' + skipped.length + ' image' + (skipped.length === 1 ? '' : 's') + '.'
-          : 'No image blocks linked directly to image files were found.'
+          ? 'Found ' + skipped.length + ' linked image' + (skipped.length === 1 ? '' : 's') + ', but their alt text already matched the stricter destination format.'
+          : candidateCount
+            ? 'Found linked image candidates, but no alt text updates were needed.'
+            : 'No image or gallery blocks linked directly to image files were found.'
     };
   }
 

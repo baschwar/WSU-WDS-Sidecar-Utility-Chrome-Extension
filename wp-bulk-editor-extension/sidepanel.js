@@ -74,16 +74,25 @@ function waitForTabLoad(tabId) {
 }
 
 async function getEditorTab() {
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+  if (activeTab?.id && isWordPressEditorUrl(activeTab.url)) {
+    return activeTab;
+  }
+
   const editorTabs = await chrome.tabs.query({
-    url: ["*://*/wp-admin/post.php*", "*://*/wp-admin/post-new.php*"]
+    url: [
+      "*://*/wp-admin/post.php*",
+      "*://*/wp-admin/post-new.php*",
+      "*://*/*/wp-admin/post.php*",
+      "*://*/*/wp-admin/post-new.php*"
+    ]
   });
   const editorTab = editorTabs.find((tab) => isWordPressEditorUrl(tab.url)) || editorTabs[0];
 
   if (editorTab?.id) {
     return editorTab;
   }
-
-  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
   if (!activeTab?.id) {
     throw new Error("No WordPress editor tab found. Click the WordPress editor tab, then run this utility again.");
