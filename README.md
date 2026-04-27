@@ -1,6 +1,6 @@
 # WSU WDS Sidecar Utilities
 
-A Chrome side panel extension for speeding up WordPress block editor cleanup tasks used in WSU Web/Digital Strategy workflows.
+A Chrome side panel extension for speeding up WordPress block editor cleanup tasks used in WSU Web Design System workflows.
 
 The extension runs in the browser while you are logged into WordPress. It does not require database access, WP-CLI, SSH, or a WordPress plugin install.
 
