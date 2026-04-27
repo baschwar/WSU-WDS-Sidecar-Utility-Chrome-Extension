@@ -437,16 +437,28 @@
     }
   }
 
-  function fileDestinationLabel(url, fallbackText) {
+  function imageFileTypeFromUrl(url) {
     const filename = imageFilenameFromUrl(url);
-    const cleanedFallback = (fallbackText || '')
-      .replace(/<[^>]+>/g, ' ')
+    const extension = (filename.match(/\.([^.]+)$/)?.[1] || 'image').toUpperCase();
+
+    return extension === 'JPEG' ? 'JPG' : extension;
+  }
+
+  function fileDestinationLabel(url, fallbackText) {
+    const filenameDescription = imageFilenameFromUrl(url)
+      .replace(/\.[^.]+$/, '')
       .replace(/[-_]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
-    const destination = filename || cleanedFallback || 'image file';
+    const cleanedFallback = (fallbackText || '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\.[a-z0-9]+$/i, '')
+      .replace(/[-_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const description = cleanedFallback || filenameDescription || 'image';
 
-    return 'Download full-size image: ' + destination;
+    return 'Full-size ' + imageFileTypeFromUrl(url) + ' of ' + description;
   }
 
   function linkedImageHrefFromAttributes(attrs) {
@@ -538,6 +550,196 @@
           : candidateCount
             ? 'Found linked image candidates, but no alt text updates were needed.'
             : 'No image or gallery blocks linked directly to image files were found.'
+    };
+  }
+
+  function cleanText(value) {
+    const template = document.createElement('template');
+    template.innerHTML = value || '';
+    return (template.content.textContent || value || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function imageBasenameFromUrl(url) {
+    return imageFilenameFromUrl(url)
+      .replace(/\.[^.]+$/, '')
+      .replace(/[-_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function shouldSuggestAlt(alt) {
+    const value = cleanText(alt).toLowerCase();
+
+    if (!value) {
+      return true;
+    }
+
+    return /\.(avif|gif|jpe?g|png|svg|webp)$/i.test(value)
+      || /^image( of)?\b/.test(value)
+      || value.length > 160;
+  }
+
+  function altSuggestionForImage(attrs, context = {}) {
+    const caption = cleanText(attrs.caption || context.caption || '');
+    const title = cleanText(attrs.title || context.title || '');
+    const filename = imageBasenameFromUrl(attrs.url || attrs.href || attrs.linkUrl || context.url || '');
+    const currentAlt = cleanText(attrs.alt || '');
+    const source = caption || title || filename || currentAlt;
+
+    if (!source) {
+      return '';
+    }
+
+    return source
+      .replace(/^image of\s+/i, '')
+      .replace(/^photo of\s+/i, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 150);
+  }
+
+  function imageSuggestionLabel(attrs, fallback) {
+    return cleanText(attrs.caption || attrs.title || attrs.alt) || imageFilenameFromUrl(attrs.url || attrs.href || attrs.linkUrl) || fallback;
+  }
+
+  function prefixAltWithPageTitle(suggestion, pageTitle, includePageTitle) {
+    if (!includePageTitle || !pageTitle || !suggestion) {
+      return suggestion;
+    }
+
+    const cleanPageTitle = cleanText(pageTitle).replace(/\s+/g, ' ').trim();
+    const cleanSuggestion = cleanText(suggestion);
+
+    if (!cleanPageTitle || cleanSuggestion.toLowerCase().startsWith(cleanPageTitle.toLowerCase() + ':')) {
+      return cleanSuggestion;
+    }
+
+    return (cleanPageTitle + ': ' + cleanSuggestion).slice(0, 170);
+  }
+
+  function suggestImageAltText(payload = {}) {
+    if (!window.wp?.data) {
+      return { ok: false, message: 'Open this on a WordPress block editor page first.', suggestions: [] };
+    }
+
+    const suggestions = [];
+    const blocks = collectBlocks(getEditorBlocks(), () => true);
+    const editorSelect = window.wp.data.select('core/editor');
+    const pageTitle = cleanText(editorSelect?.getEditedPostAttribute?.('title') || editorSelect?.getCurrentPostAttribute?.('title') || '');
+    const includePageTitle = Boolean(payload?.includePageTitle);
+
+    blocks.forEach((block) => {
+      const attrs = block.attributes || {};
+
+      if (block.name === 'core/image') {
+        if (!shouldSuggestAlt(attrs.alt)) {
+          return;
+        }
+
+        const suggestion = prefixAltWithPageTitle(altSuggestionForImage(attrs), pageTitle, includePageTitle);
+
+        if (!suggestion) {
+          return;
+        }
+
+        suggestions.push({
+          target: { type: 'block', clientId: block.clientId },
+          label: imageSuggestionLabel(attrs, 'Image block'),
+          filename: imageFilenameFromUrl(attrs.url || attrs.href || attrs.linkUrl),
+          currentAlt: cleanText(attrs.alt || ''),
+          suggestion,
+          reason: (includePageTitle && pageTitle ? 'Includes page title. ' : '') + (attrs.caption ? 'Suggested from caption.' : attrs.title ? 'Suggested from media title.' : 'Suggested from filename.')
+        });
+        return;
+      }
+
+      if (block.name === 'core/gallery' && Array.isArray(attrs.images)) {
+        attrs.images.forEach((image, imageIndex) => {
+          if (!shouldSuggestAlt(image?.alt)) {
+            return;
+          }
+
+          const suggestion = prefixAltWithPageTitle(altSuggestionForImage(image || {}), pageTitle, includePageTitle);
+
+          if (!suggestion) {
+            return;
+          }
+
+          suggestions.push({
+            target: { type: 'galleryImage', clientId: block.clientId, imageIndex },
+            label: imageSuggestionLabel(image || {}, 'Gallery image ' + (imageIndex + 1)),
+            filename: imageFilenameFromUrl(image?.url || image?.href || image?.linkUrl),
+            currentAlt: cleanText(image?.alt || ''),
+            suggestion,
+            reason: (includePageTitle && pageTitle ? 'Includes page title. ' : '') + (image?.caption ? 'Suggested from caption.' : image?.title ? 'Suggested from media title.' : 'Suggested from filename.')
+          });
+        });
+      }
+    });
+
+    return {
+      ok: true,
+      message: 'Found ' + suggestions.length + ' image alt suggestion' + (suggestions.length === 1 ? '' : 's') + '.',
+      suggestions,
+      details: suggestions.length
+        ? suggestions.map((item) => item.label + ' -> ' + item.suggestion).join('\\n')
+        : 'No empty or suspicious image alt text values found.'
+    };
+  }
+
+  function applyImageAltTextSuggestions(payload) {
+    if (!window.wp?.data) {
+      return { ok: false, message: 'Open this on a WordPress block editor page first.' };
+    }
+
+    const updates = Array.isArray(payload?.updates) ? payload.updates : [];
+    const blocksByClientId = new Map(collectBlocks(getEditorBlocks(), () => true).map((block) => [block.clientId, block]));
+    const changes = [];
+
+    updates.forEach((update) => {
+      const alt = cleanText(update?.alt || '');
+      const target = update?.target || {};
+
+      if (!alt || !target.clientId) {
+        return;
+      }
+
+      const block = blocksByClientId.get(target.clientId);
+
+      if (!block) {
+        return;
+      }
+
+      if (target.type === 'block') {
+        window.wp.data.dispatch('core/block-editor').updateBlockAttributes(target.clientId, { alt });
+        changes.push(alt);
+        return;
+      }
+
+      if (target.type === 'galleryImage' && Array.isArray(block.attributes?.images)) {
+        const index = Number.parseInt(target.imageIndex, 10);
+
+        if (!Number.isInteger(index) || !block.attributes.images[index]) {
+          return;
+        }
+
+        const nextImages = block.attributes.images.map((image, imageIndex) => {
+          return imageIndex === index ? { ...image, alt } : image;
+        });
+
+        window.wp.data.dispatch('core/block-editor').updateBlockAttributes(target.clientId, {
+          images: nextImages
+        });
+        changes.push(alt);
+      }
+    });
+
+    return {
+      ok: true,
+      message: 'Applied ' + changes.length + ' image alt suggestion' + (changes.length === 1 ? '' : 's') + '.',
+      details: changes.length ? changes.map((alt) => 'Alt: ' + alt).join('\\n') : 'No image alt suggestions were applied.'
     };
   }
 
@@ -869,6 +1071,8 @@
     unboldLongAllBoldParagraphs,
     removeNewTabFromLinks,
     setLinkedImageAltToDestination,
+    suggestImageAltText,
+    applyImageAltTextSuggestions,
     convertShortAllBoldParagraphsToH2,
     splitLeadingBoldLineToH2,
     scanAccessibilityNoDataRows,

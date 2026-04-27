@@ -2,6 +2,12 @@ const fixHeadingOrderButton = document.querySelector("#fix-heading-order");
 const fixUrlLinkTextButton = document.querySelector("#fix-url-link-text");
 const fixNewTabLinksButton = document.querySelector("#fix-new-tab-links");
 const fixLinkedImageAltButton = document.querySelector("#fix-linked-image-alt");
+const suggestAltTextButton = document.querySelector("#suggest-alt-text");
+const applyAltSuggestionsButton = document.querySelector("#apply-alt-suggestions");
+const deselectAltSuggestionsButton = document.querySelector("#deselect-alt-suggestions");
+const altSuggestionActionsEl = document.querySelector("#alt-suggestion-actions");
+const altSuggestionsEl = document.querySelector("#alt-suggestions");
+const includePageTitleAltInput = document.querySelector("#include-page-title-alt");
 const fixBoldParagraphsButton = document.querySelector("#fix-bold-paragraphs");
 const fixShortBoldHeadingsButton = document.querySelector("#fix-short-bold-headings");
 const fixLeadingBoldLineButton = document.querySelector("#fix-leading-bold-line");
@@ -16,6 +22,7 @@ const statusEl = document.querySelector("#status");
 const detailsEl = document.querySelector("#details");
 
 const SIZE_VALUES = ["Medium", "xMedium", "xxMedium", "Large", "xLarge", "xxLarge"];
+let currentAltSuggestions = [];
 
 function setStatus(message) {
   statusEl.textContent = message;
@@ -261,6 +268,116 @@ fixLinkedImageAltButton.addEventListener("click", async () => {
     setDetails(String(error?.stack || error?.message || error));
   } finally {
     fixLinkedImageAltButton.disabled = false;
+  }
+});
+
+function renderAltSuggestions(suggestions) {
+  currentAltSuggestions = suggestions || [];
+  altSuggestionsEl.textContent = "";
+  altSuggestionsEl.hidden = !currentAltSuggestions.length;
+  altSuggestionActionsEl.hidden = !currentAltSuggestions.length;
+
+  currentAltSuggestions.forEach((suggestion, index) => {
+    const item = document.createElement("div");
+    item.className = "suggestion-item";
+
+    const header = document.createElement("label");
+    header.className = "suggestion-header";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = true;
+    checkbox.dataset.index = String(index);
+
+    const title = document.createElement("span");
+    title.textContent = suggestion.label || suggestion.filename || "Image";
+
+    header.append(checkbox, title);
+
+    const textarea = document.createElement("textarea");
+    textarea.value = suggestion.suggestion || "";
+    textarea.dataset.index = String(index);
+
+    const meta = document.createElement("div");
+    meta.className = "suggestion-meta";
+    meta.textContent = [
+      suggestion.currentAlt ? "Current: " + suggestion.currentAlt : "Current: empty",
+      suggestion.reason || "Review before applying."
+    ].join(" | ");
+
+    item.append(header, textarea, meta);
+    altSuggestionsEl.append(item);
+  });
+}
+
+suggestAltTextButton.addEventListener("click", async () => {
+  suggestAltTextButton.disabled = true;
+  altSuggestionActionsEl.hidden = true;
+  altSuggestionsEl.hidden = true;
+  altSuggestionsEl.textContent = "";
+  setStatus("Scanning images for alt suggestions...");
+  setDetails("");
+
+  try {
+    const response = await runInEditorTab("suggestImageAltText", {
+      includePageTitle: includePageTitleAltInput.checked
+    });
+    const suggestions = response.suggestions || [];
+
+    renderAltSuggestions(suggestions);
+    setStatus(response.message);
+    setDetails(response.details || "");
+  } catch (error) {
+    setStatus(error.message || "Could not suggest image alt text.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    suggestAltTextButton.disabled = false;
+  }
+});
+
+deselectAltSuggestionsButton.addEventListener("click", () => {
+  altSuggestionsEl.querySelectorAll('.suggestion-header input[type="checkbox"]').forEach((checkbox) => {
+    checkbox.checked = false;
+  });
+});
+
+applyAltSuggestionsButton.addEventListener("click", async () => {
+  applyAltSuggestionsButton.disabled = true;
+  setStatus("Applying checked alt suggestions...");
+  setDetails("");
+
+  try {
+    const checkedCheckboxes = [];
+    const updates = Array.from(altSuggestionsEl.querySelectorAll(".suggestion-item")).map((item) => {
+      const checkbox = item.querySelector('input[type="checkbox"]');
+      const textarea = item.querySelector("textarea");
+      const suggestion = currentAltSuggestions[Number.parseInt(textarea.dataset.index, 10)];
+
+      if (!checkbox.checked || !textarea.value.trim()) {
+        return null;
+      }
+
+      checkedCheckboxes.push(checkbox);
+      return { target: suggestion.target, alt: textarea.value.trim() };
+    }).filter(Boolean);
+
+    if (!updates.length) {
+      setStatus("No checked alt suggestions to apply.");
+      return;
+    }
+
+    const response = await runInEditorTab("applyImageAltTextSuggestions", { updates });
+
+    checkedCheckboxes.forEach((checkbox) => {
+      checkbox.checked = false;
+    });
+    setStatus(response.message);
+    setDetails(response.details || "");
+  } catch (error) {
+    setStatus(error.message || "Could not apply image alt text suggestions.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    applyAltSuggestionsButton.disabled = false;
   }
 });
 

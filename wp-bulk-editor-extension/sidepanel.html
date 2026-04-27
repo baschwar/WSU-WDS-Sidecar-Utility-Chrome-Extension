@@ -16,6 +16,7 @@
       <section class="panel">
         <h2>Update No Data Posts/Pages</h2>
         <div class="utility-card">
+          <h3 class="tooltip-heading"><span>No Data Updater</span><button class="tooltip-trigger" type="button" aria-label="Open visible Posts or Pages marked No Data in the Accessibility column and save them so WordPress can regenerate checks.">?</button><span class="tooltip-text" role="tooltip">Open visible Posts or Pages marked No Data in the Accessibility column and save them so WordPress can regenerate checks.</span></h3>
           <button id="resave-no-data" type="button">Update visible No Data posts/pages</button>
         </div>
       </section>
@@ -24,27 +25,38 @@
         <h2>Accessibility Fixes</h2>
 
         <div class="utility-card">
-          <h3>Heading Order</h3>
+          <h3 class="tooltip-heading"><span>Heading Order</span><button class="tooltip-trigger" type="button" aria-label="Change content heading blocks to H2 to clear incorrect heading order alerts. The post/page title is not touched.">?</button><span class="tooltip-text" role="tooltip">Change content heading blocks to H2 to clear incorrect heading order alerts. The post/page title is not touched.</span></h3>
           <button id="fix-heading-order" type="button">Fix incorrect heading order</button>
         </div>
 
         <div class="utility-card">
-          <h3>URL Link Text</h3>
+          <h3 class="tooltip-heading"><span>URL Link Text</span><button class="tooltip-trigger" type="button" aria-label="Find links whose visible text is a URL and replace that text with the linked page title.">?</button><span class="tooltip-text" role="tooltip">Find links whose visible text is a URL and replace that text with the linked page title.</span></h3>
           <button id="fix-url-link-text" type="button">Replace URL link text with page titles</button>
         </div>
 
         <div class="utility-card">
-          <h3>New Tab Links</h3>
+          <h3 class="tooltip-heading"><span>New Tab Links</span><button class="tooltip-trigger" type="button" aria-label="Remove open-in-new-tab behavior from rich text links while preserving other link settings.">?</button><span class="tooltip-text" role="tooltip">Remove open-in-new-tab behavior from rich text links while preserving other link settings.</span></h3>
           <button id="fix-new-tab-links" type="button">Remove open-in-new-tab from links</button>
         </div>
 
         <div class="utility-card">
-          <h3>Linked Image Alt Text</h3>
+          <h3 class="tooltip-heading"><span>Linked Image Alt Text</span><button class="tooltip-trigger" type="button" aria-label="For images linked directly to image files, set alt text that describes the full-size file destination.">?</button><span class="tooltip-text" role="tooltip">For images linked directly to image files, set alt text that describes the full-size file destination.</span></h3>
           <button id="fix-linked-image-alt" type="button">Set linked image alt to file destination</button>
         </div>
 
         <div class="utility-card">
-          <h3>Bold Paragraphs</h3>
+          <h3 class="tooltip-heading"><span>Alt Suggestions</span><button class="tooltip-trigger" type="button" aria-label="Scan image blocks with missing or suspicious alt text, generate editable suggestions, and apply only checked items.">?</button><span class="tooltip-text" role="tooltip">Scan image blocks with missing or suspicious alt text, generate editable suggestions, and apply only checked items.</span></h3>
+          <label class="compact-check"><input id="include-page-title-alt" type="checkbox" checked> Include page title</label>
+          <button id="suggest-alt-text" type="button">Suggest missing image alt text</button>
+          <div id="alt-suggestions" class="suggestion-list" hidden></div>
+          <div class="button-row" id="alt-suggestion-actions" hidden>
+            <button id="deselect-alt-suggestions" class="secondary" type="button">Deselect all</button>
+            <button id="apply-alt-suggestions" type="button">Apply checked suggestions</button>
+          </div>
+        </div>
+
+        <div class="utility-card">
+          <h3 class="tooltip-heading"><span>Bold Paragraphs</span><button class="tooltip-trigger" type="button" aria-label="Fix paragraphs that are entirely bold, including converting short bold lines into H2 headings when appropriate.">?</button><span class="tooltip-text" role="tooltip">Fix paragraphs that are entirely bold, including converting short bold lines into H2 headings when appropriate.</span></h3>
           <div class="rule-row">
             <label for="bold-max-chars">Bold paragraph min chars =</label>
             <input id="bold-max-chars" type="number" min="1" max="500" step="1" value="120">
@@ -60,12 +72,12 @@
       </section>
 
       <section class="panel">
-        <h2>Heading Cleanup</h2>
+        <h2 class="tooltip-heading"><span>Heading Cleanup</span><button class="tooltip-trigger" type="button" aria-label="Convert all content heading blocks to H2. The post/page title is not touched.">?</button><span class="tooltip-text" role="tooltip">Convert all content heading blocks to H2. The post/page title is not touched.</span></h2>
         <button id="make-headings-h2" type="button">Make all headings H2</button>
       </section>
 
       <section class="panel">
-        <h2>Heading Size</h2>
+        <h2 class="tooltip-heading"><span>Heading Size</span><button class="tooltip-trigger" type="button" aria-label="Apply a WSU font-size class to every H2 block while preserving unrelated Advanced classes.">?</button><span class="tooltip-text" role="tooltip">Apply a WSU font-size class to every H2 block while preserving unrelated Advanced classes.</span></h2>
         <div class="rule-row">
           <label for="font-size">Make H2 =</label>
           <select id="font-size">
