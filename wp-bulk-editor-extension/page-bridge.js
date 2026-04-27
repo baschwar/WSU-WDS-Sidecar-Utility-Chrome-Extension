@@ -499,6 +499,37 @@
       return null;
     }
 
+    const childNodes = Array.from(firstNode.childNodes);
+    const brInsideIndex = childNodes.findIndex((node) => {
+      return node.nodeType === Node.ELEMENT_NODE && node.tagName.toLowerCase() === 'br';
+    });
+
+    if (brInsideIndex !== -1) {
+      const headingTemplate = document.createElement('template');
+      childNodes.slice(0, brInsideIndex).forEach((node) => headingTemplate.content.appendChild(node.cloneNode(true)));
+      const headingContent = headingTemplate.innerHTML.trim();
+      const headingText = getTextContentFromHtml(headingContent);
+
+      if (!headingText) {
+        return null;
+      }
+
+      const remainingTemplate = document.createElement('template');
+      childNodes.slice(brInsideIndex + 1).forEach((node) => remainingTemplate.content.appendChild(node.cloneNode(true)));
+      nodes.slice(firstMeaningfulIndex + 1).forEach((node) => remainingTemplate.content.appendChild(node.cloneNode(true)));
+      const remainingContent = remainingTemplate.innerHTML.trim();
+
+      if (!getTextContentFromHtml(remainingContent)) {
+        return null;
+      }
+
+      return {
+        headingContent,
+        headingText,
+        remainingContent
+      };
+    }
+
     const nextNode = nodes[firstMeaningfulIndex + 1];
 
     if (!nextNode || nextNode.nodeType !== Node.ELEMENT_NODE || nextNode.tagName.toLowerCase() !== 'br') {
