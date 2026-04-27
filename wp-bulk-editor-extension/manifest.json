@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "WSU WDS Sidecar Utilities",
+  "description": "Sidecar utilities for bulk-editing WordPress block editor content.",
+  "version": "0.9.0",
+  "permissions": [
+    "activeTab",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "*://*/wp-admin/post.php*",
+    "*://*/wp-admin/post-new.php*",
+    "*://*/*/wp-admin/post.php*",
+    "*://*/*/wp-admin/post-new.php*",
+    "http://*/*",
+    "https://*/*"
+  ],
+  "action": {
+    "default_title": "WSU WDS Sidecar Utilities"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*/wp-admin/post.php*",
+        "*://*/wp-admin/post-new.php*",
+        "*://*/*/wp-admin/post.php*",
+        "*://*/*/wp-admin/post-new.php*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "page-bridge.js"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ]
+    }
+  ]
+}

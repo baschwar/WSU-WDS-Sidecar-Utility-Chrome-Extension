@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WSU WDS Sidecar Utilities</title>
+    <link rel="stylesheet" href="sidepanel.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>WSU WDS Sidecar</h1>
+        <p>Bulk utilities for the WordPress editor.</p>
+      </header>
+
+      <section class="panel">
+        <h2>Accessibility Fixes</h2>
+
+        <div class="utility-card">
+          <h3>Heading Order</h3>
+          <button id="fix-heading-order" type="button">Fix incorrect heading order</button>
+        </div>
+
+        <div class="utility-card">
+          <h3>URL Link Text</h3>
+          <button id="fix-url-link-text" type="button">Replace URL link text with page titles</button>
+        </div>
+
+        <div class="utility-card">
+          <h3>New Tab Links</h3>
+          <button id="fix-new-tab-links" type="button">Remove open-in-new-tab from links</button>
+        </div>
+
+        <div class="utility-card">
+          <h3>Bold Paragraphs</h3>
+          <div class="rule-row">
+            <label for="bold-max-chars">Bold paragraph min chars =</label>
+            <input id="bold-max-chars" type="number" min="1" max="500" step="1" value="120">
+          </div>
+          <button id="fix-bold-paragraphs" type="button">Unbold long all-bold paragraphs</button>
+          <div class="rule-row">
+            <label for="bold-heading-max-words">Bold heading max words =</label>
+            <input id="bold-heading-max-words" type="number" min="1" max="20" step="1" value="4">
+          </div>
+          <button id="fix-short-bold-headings" type="button">Make short bold paragraphs H2 xMedium</button>
+          <button id="fix-leading-bold-line" type="button">Split leading bold line to H2 xMedium</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Heading Cleanup</h2>
+        <button id="make-headings-h2" type="button">Make all headings H2</button>
+      </section>
+
+      <section class="panel">
+        <h2>Heading Size</h2>
+        <div class="rule-row">
+          <label for="font-size">Make H2 =</label>
+          <select id="font-size">
+            <option value="">Default</option>
+            <option value="Medium">Medium</option>
+            <option value="xMedium" selected>xMedium</option>
+            <option value="xxMedium">xxMedium</option>
+            <option value="Large">Large</option>
+            <option value="xLarge">xLarge</option>
+            <option value="xxLarge">xxLarge</option>
+          </select>
+        </div>
+        <button id="apply-h2">Apply to all H2 blocks</button>
+        <button id="inspect-block" class="secondary" type="button">Inspect selected block</button>
+      </section>
+
+      <p id="status" role="status"></p>
+      <pre id="details" hidden></pre>
+    </main>
+
+    <script src="sidepanel.js"></script>
+  </body>
+</html>

@@ -1,0 +1,326 @@
+const fixHeadingOrderButton = document.querySelector("#fix-heading-order");
+const fixUrlLinkTextButton = document.querySelector("#fix-url-link-text");
+const fixNewTabLinksButton = document.querySelector("#fix-new-tab-links");
+const fixBoldParagraphsButton = document.querySelector("#fix-bold-paragraphs");
+const fixShortBoldHeadingsButton = document.querySelector("#fix-short-bold-headings");
+const fixLeadingBoldLineButton = document.querySelector("#fix-leading-bold-line");
+const boldMaxCharsInput = document.querySelector("#bold-max-chars");
+const boldHeadingMaxWordsInput = document.querySelector("#bold-heading-max-words");
+const makeHeadingsH2Button = document.querySelector("#make-headings-h2");
+const applyButton = document.querySelector("#apply-h2");
+const inspectButton = document.querySelector("#inspect-block");
+const fontSizeSelect = document.querySelector("#font-size");
+const statusEl = document.querySelector("#status");
+const detailsEl = document.querySelector("#details");
+
+const SIZE_VALUES = ["Medium", "xMedium", "xxMedium", "Large", "xLarge", "xxLarge"];
+
+function setStatus(message) {
+  statusEl.textContent = message;
+}
+
+function setDetails(value) {
+  detailsEl.hidden = !value;
+  detailsEl.textContent = value || "";
+}
+
+function isWordPressEditorUrl(url = "") {
+  try {
+    const parsed = new URL(url);
+
+    if (!parsed.pathname.match(/\/wp-admin\/(post|post-new)\.php$/)) {
+      return false;
+    }
+
+    return parsed.pathname.endsWith("/post-new.php") || parsed.searchParams.get("action") === "edit";
+  } catch (_error) {
+    return false;
+  }
+}
+
+async function getEditorTab() {
+  const editorTabs = await chrome.tabs.query({
+    url: ["*://*/wp-admin/post.php*", "*://*/wp-admin/post-new.php*"]
+  });
+  const editorTab = editorTabs.find((tab) => isWordPressEditorUrl(tab.url)) || editorTabs[0];
+
+  if (editorTab?.id) {
+    return editorTab;
+  }
+
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+  if (!activeTab?.id) {
+    throw new Error("No WordPress editor tab found. Click the WordPress editor tab, then run this utility again.");
+  }
+
+  return activeTab;
+}
+
+async function runInEditorTab(action, payload = {}) {
+  const tab = await getEditorTab();
+  setDetails("Target tab: " + (tab.title || tab.url || "WordPress editor"));
+
+  try {
+    return await chrome.tabs.sendMessage(tab.id, {
+      source: "WSU_WDS_SIDEPANEL",
+      action,
+      payload
+    });
+  } catch (error) {
+    throw new Error("Could not reach the WSU WDS content script. Reload the WordPress editor tab, then try again. " + (error.message || ""));
+  }
+}
+
+fixHeadingOrderButton.addEventListener("click", async () => {
+  fixHeadingOrderButton.disabled = true;
+  setStatus("Fixing heading order...");
+  setDetails("");
+
+  try {
+    const response = await runInEditorTab("makeAllHeadingsH2");
+
+    setStatus(response.message);
+    setDetails(response.details || "");
+  } catch (error) {
+    setStatus(error.message || "Could not fix heading order.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    fixHeadingOrderButton.disabled = false;
+  }
+});
+
+fixUrlLinkTextButton.addEventListener("click", async () => {
+  fixUrlLinkTextButton.disabled = true;
+  setStatus("Finding URL link text...");
+  setDetails("");
+
+  try {
+    const scan = await runInEditorTab("scanUrlLinkText");
+
+    if (!scan.candidates?.length) {
+      setStatus("No URL link text found.");
+      setDetails(scan.details || "");
+      return;
+    }
+
+    setStatus(`Fetching ${scan.candidates.length} page title${scan.candidates.length === 1 ? "" : "s"}...`);
+    setDetails(scan.details || "");
+    const titleMap = await fetchPageTitles(scan.candidates.map((candidate) => candidate.href));
+    const response = await runInEditorTab("applyUrlLinkTextTitles", { titleMap });
+
+    setStatus(response.message);
+    setDetails(response.details || "");
+  } catch (error) {
+    setStatus(error.message || "Could not fix URL link text.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    fixUrlLinkTextButton.disabled = false;
+  }
+});
+
+fixNewTabLinksButton.addEventListener("click", async () => {
+  fixNewTabLinksButton.disabled = true;
+  setStatus("Removing open-in-new-tab links...");
+  setDetails("");
+
+  try {
+    const response = await runInEditorTab("removeNewTabFromLinks");
+
+    setStatus(response.message);
+    setDetails(response.details || "");
+  } catch (error) {
+    setStatus(error.message || "Could not remove open-in-new-tab links.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    fixNewTabLinksButton.disabled = false;
+  }
+});
+
+fixBoldParagraphsButton.addEventListener("click", async () => {
+  fixBoldParagraphsButton.disabled = true;
+  setStatus("Finding long all-bold paragraphs...");
+  setDetails("");
+
+  try {
+    const maxChars = Number.parseInt(boldMaxCharsInput.value, 10) || 120;
+    const response = await runInEditorTab("unboldLongAllBoldParagraphs", { minChars: maxChars });
+
+    setStatus(response.message);
+    setDetails(response.details || "");
+  } catch (error) {
+    setStatus(error.message || "Could not fix long bold-only paragraphs.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    fixBoldParagraphsButton.disabled = false;
+  }
+});
+
+async function fetchPageTitles(urls) {
+  const uniqueUrls = Array.from(new Set(urls));
+  const entries = [];
+
+  for (const [index, url] of uniqueUrls.entries()) {
+    setStatus(`Fetching page title ${index + 1} of ${uniqueUrls.length}...`);
+    entries.push([url, await fetchPageTitle(url)]);
+  }
+
+  return Object.fromEntries(entries);
+}
+
+async function fetchPageTitle(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 6000);
+
+  try {
+    const response = await fetch(url, {
+      credentials: "omit",
+      redirect: "follow",
+      signal: controller.signal
+    });
+    const contentType = response.headers.get("content-type") || "";
+
+    if (!contentType.includes("text/html")) {
+      return titleFromUrl(url);
+    }
+
+    const html = await response.text();
+    const title = extractTitle(html) || titleFromUrl(url);
+
+    return decodeHtmlEntities(title).trim() || titleFromUrl(url);
+  } catch (_error) {
+    return titleFromUrl(url);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function extractTitle(html) {
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+
+  if (titleMatch?.[1]) {
+    return titleMatch[1].replace(/\s+/g, " ");
+  }
+
+  const ogTitleMatch = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["'][^>]*>/i)
+    || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["'][^>]*>/i);
+
+  return ogTitleMatch?.[1] || "";
+}
+
+function decodeHtmlEntities(value) {
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = value;
+  return textarea.value;
+}
+
+function titleFromUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.replace(/^www\./, "");
+  } catch (_error) {
+    return url;
+  }
+}
+
+fixShortBoldHeadingsButton.addEventListener("click", async () => {
+  fixShortBoldHeadingsButton.disabled = true;
+  setStatus("Converting short bold paragraphs...");
+  setDetails("");
+
+  try {
+    const maxWords = Number.parseInt(boldHeadingMaxWordsInput.value, 10) || 4;
+    const response = await runInEditorTab("convertShortAllBoldParagraphsToH2", {
+      maxWords,
+      fontSize: "xMedium"
+    });
+
+    setStatus(response.message);
+    setDetails(response.details || "");
+  } catch (error) {
+    setStatus(error.message || "Could not convert short bold paragraphs.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    fixShortBoldHeadingsButton.disabled = false;
+  }
+});
+
+fixLeadingBoldLineButton.addEventListener("click", async () => {
+  fixLeadingBoldLineButton.disabled = true;
+  setStatus("Splitting leading bold lines...");
+  setDetails("");
+
+  try {
+    const maxWords = Number.parseInt(boldHeadingMaxWordsInput.value, 10) || 4;
+    const response = await runInEditorTab("splitLeadingBoldLineToH2", {
+      maxWords,
+      fontSize: "xMedium"
+    });
+
+    setStatus(response.message);
+    setDetails(response.details || "");
+  } catch (error) {
+    setStatus(error.message || "Could not split leading bold lines.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    fixLeadingBoldLineButton.disabled = false;
+  }
+});
+
+makeHeadingsH2Button.addEventListener("click", async () => {
+  makeHeadingsH2Button.disabled = true;
+  setStatus("Converting headings...");
+  setDetails("");
+
+  try {
+    const response = await runInEditorTab("makeAllHeadingsH2");
+
+    setStatus(response.message);
+    if (response.details) {
+      setDetails(response.details);
+    }
+  } catch (error) {
+    setStatus(error.message || "Could not update headings.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    makeHeadingsH2Button.disabled = false;
+  }
+});
+
+applyButton.addEventListener("click", async () => {
+  applyButton.disabled = true;
+  setStatus("Applying...");
+  setDetails("");
+
+  try {
+    const response = await runInEditorTab("applyH2FontSize", { fontSize: fontSizeSelect.value });
+
+    setStatus(response.message);
+    if (response.details) {
+      setDetails(response.details);
+    }
+  } catch (error) {
+    setStatus(error.message || "Could not reach the WordPress editor.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    applyButton.disabled = false;
+  }
+});
+
+inspectButton.addEventListener("click", async () => {
+  inspectButton.disabled = true;
+  setStatus("Inspecting selected block...");
+  setDetails("");
+
+  try {
+    const response = await runInEditorTab("inspectSelectedBlock");
+
+    setStatus(response.message);
+    setDetails(response.details);
+  } catch (error) {
+    setStatus(error.message || "Could not inspect the selected block.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    inspectButton.disabled = false;
+  }
+});

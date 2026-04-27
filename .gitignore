@@ -1,0 +1,7 @@
+.DS_Store
+
+# Old scratch popup files at the project root; the loadable extension lives in wp-bulk-editor-extension/
+/manifest.json
+/popup.html
+/popup.css
+/popup.js
