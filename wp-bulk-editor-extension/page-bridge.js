@@ -418,6 +418,75 @@
     };
   }
 
+
+  function isImageFileUrl(url) {
+    try {
+      const parsed = new URL(url, window.location.href);
+      return /\.(avif|gif|jpe?g|png|svg|webp)(?:$|[?#])/i.test(parsed.pathname);
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function fileDestinationLabel(url, fallbackText) {
+    let filename = '';
+
+    try {
+      const parsed = new URL(url, window.location.href);
+      filename = decodeURIComponent((parsed.pathname.split('/').filter(Boolean).pop() || '').replace(/\.[^.]+$/, ''));
+    } catch (_error) {
+      filename = '';
+    }
+
+    const cleaned = (filename || fallbackText || 'image')
+      .replace(/[-_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    return 'Download full-size image: ' + cleaned;
+  }
+
+  function setLinkedImageAltToDestination() {
+    if (!window.wp?.data) {
+      return { ok: false, message: 'Open this on a WordPress block editor page first.' };
+    }
+
+    const imageBlocks = collectBlocks(getEditorBlocks(), (block) => block.name === 'core/image');
+    const changes = [];
+    const skipped = [];
+
+    imageBlocks.forEach((block) => {
+      const attrs = block.attributes || {};
+      const href = attrs.href || attrs.linkUrl || '';
+
+      if (!href || !isImageFileUrl(href)) {
+        return;
+      }
+
+      const nextAlt = fileDestinationLabel(href, attrs.title || attrs.caption || attrs.alt);
+
+      if ((attrs.alt || '') === nextAlt) {
+        skipped.push(nextAlt);
+        return;
+      }
+
+      window.wp.data.dispatch('core/block-editor').updateBlockAttributes(block.clientId, {
+        alt: nextAlt
+      });
+      changes.push(nextAlt);
+    });
+
+    return {
+      ok: true,
+      message: 'Updated ' + changes.length + ' linked image alt text value' + (changes.length === 1 ? '' : 's') + '.',
+      details: changes.length
+        ? changes.map((value) => 'Alt: ' + value).join('\n')
+        : skipped.length
+          ? 'Linked image alt text was already set for ' + skipped.length + ' image' + (skipped.length === 1 ? '' : 's') + '.'
+          : 'No image blocks linked directly to image files were found.'
+    };
+  }
+
   function getWordCount(text) {
     return (text.match(/\b[\w’'-]+\b/g) || []).length;
   }
@@ -745,6 +814,7 @@
     applyUrlLinkTextTitles,
     unboldLongAllBoldParagraphs,
     removeNewTabFromLinks,
+    setLinkedImageAltToDestination,
     convertShortAllBoldParagraphsToH2,
     splitLeadingBoldLineToH2,
     scanAccessibilityNoDataRows,

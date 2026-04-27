@@ -1,6 +1,7 @@
 const fixHeadingOrderButton = document.querySelector("#fix-heading-order");
 const fixUrlLinkTextButton = document.querySelector("#fix-url-link-text");
 const fixNewTabLinksButton = document.querySelector("#fix-new-tab-links");
+const fixLinkedImageAltButton = document.querySelector("#fix-linked-image-alt");
 const fixBoldParagraphsButton = document.querySelector("#fix-bold-paragraphs");
 const fixShortBoldHeadingsButton = document.querySelector("#fix-short-bold-headings");
 const fixLeadingBoldLineButton = document.querySelector("#fix-leading-bold-line");
@@ -232,6 +233,25 @@ fixNewTabLinksButton.addEventListener("click", async () => {
     setDetails(String(error?.stack || error?.message || error));
   } finally {
     fixNewTabLinksButton.disabled = false;
+  }
+});
+
+
+fixLinkedImageAltButton.addEventListener("click", async () => {
+  fixLinkedImageAltButton.disabled = true;
+  setStatus("Updating linked image alt text...");
+  setDetails("");
+
+  try {
+    const response = await runInEditorTab("setLinkedImageAltToDestination");
+
+    setStatus(response.message);
+    setDetails(response.details || "");
+  } catch (error) {
+    setStatus(error.message || "Could not update linked image alt text.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    fixLinkedImageAltButton.disabled = false;
   }
 });
 

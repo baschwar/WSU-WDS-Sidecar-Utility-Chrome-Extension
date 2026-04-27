@@ -26,6 +26,7 @@ Important: after reloading or updating the extension, reload any open WordPress 
 - Fix incorrect heading order by making content headings H2.
 - Replace URL-like link text with linked page titles.
 - Remove open-in-new-tab behavior from rich text links.
+- Set linked image alt text for images that link directly to full-size image files.
 - Unbold long all-bold paragraphs by character threshold.
 - Convert short all-bold paragraphs to H2 xMedium by word threshold.
 - Split a leading bold line followed by a soft return into an H2 xMedium plus a following paragraph.
@@ -75,4 +76,4 @@ Primary files:
 
 ## Version
 
-Current extension version: `0.10.0`.
+Current extension version: `0.10.1`.
