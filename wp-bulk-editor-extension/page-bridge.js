@@ -703,16 +703,27 @@
     const editorDispatch = window.wp.data.dispatch('core/editor');
     const editorSelect = window.wp.data.select('core/editor');
     const title = editorSelect?.getEditedPostAttribute?.('title') || document.title || 'Post';
+    const status = editorSelect?.getEditedPostAttribute?.('status')
+      || editorSelect?.getCurrentPostAttribute?.('status')
+      || 'unknown';
+    const draftLikeStatuses = ['auto-draft', 'draft', 'pending'];
+    const statusLabel = status === 'publish'
+      ? 'published'
+      : status === 'unknown'
+        ? 'current status'
+        : status;
 
     if (!editorDispatch?.savePost) {
-      const updateButton = document.querySelector('.editor-post-publish-button, .editor-post-save-draft, button[aria-label="Save"]');
+      const saveButton = draftLikeStatuses.includes(status)
+        ? document.querySelector('.editor-post-save-draft, button[aria-label="Save draft"]')
+        : document.querySelector('.editor-post-publish-button, button[aria-label="Update"], button[aria-label="Save"]');
 
-      if (!updateButton) {
-        return { ok: false, message: 'Could not find a WordPress save/update control.' };
+      if (!saveButton) {
+        return { ok: false, message: 'Could not find a WordPress save/update control for a post with status: ' + status + '.' };
       }
 
-      updateButton.click();
-      return { ok: true, message: 'Clicked save/update for ' + title + '.' };
+      saveButton.click();
+      return { ok: true, message: 'Clicked save/update for ' + title + ' and kept status as ' + statusLabel + '.' };
     }
 
     const saveResult = editorDispatch.savePost();
@@ -723,7 +734,7 @@
       await waitForEditorSaveToFinish();
     }
 
-    return { ok: true, message: 'Saved ' + title + '.' };
+    return { ok: true, message: 'Saved ' + title + ' and kept status as ' + statusLabel + '.' };
   }
 
   const actions = {
