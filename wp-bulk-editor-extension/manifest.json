@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "WSU WDS Sidecar Utilities",
   "description": "Sidecar utilities for bulk-editing WordPress block editor content.",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "permissions": [
     "activeTab",
     "sidePanel"
@@ -10,8 +10,10 @@
   "host_permissions": [
     "*://*/wp-admin/post.php*",
     "*://*/wp-admin/post-new.php*",
+    "*://*/wp-admin/edit.php*",
     "*://*/*/wp-admin/post.php*",
     "*://*/*/wp-admin/post-new.php*",
+    "*://*/*/wp-admin/edit.php*",
     "http://*/*",
     "https://*/*"
   ],
@@ -29,8 +31,10 @@
       "matches": [
         "*://*/wp-admin/post.php*",
         "*://*/wp-admin/post-new.php*",
+        "*://*/wp-admin/edit.php*",
         "*://*/*/wp-admin/post.php*",
-        "*://*/*/wp-admin/post-new.php*"
+        "*://*/*/wp-admin/post-new.php*",
+        "*://*/*/wp-admin/edit.php*"
       ],
       "js": [
         "content.js"

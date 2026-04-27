@@ -30,6 +30,10 @@ Important: after reloading or updating the extension, reload any open WordPress 
 - Convert short all-bold paragraphs to H2 xMedium by word threshold.
 - Split a leading bold line followed by a soft return into an H2 xMedium plus a following paragraph.
 
+### List Utilities
+
+- Re-save visible Posts/Pages rows whose Accessibility column shows No Data so WordPress can regenerate accessibility checks on save.
+
 ### Heading Cleanup
 
 - Make all content heading blocks H2.
@@ -71,4 +75,4 @@ Primary files:
 
 ## Version
 
-Current extension version: `0.9.1`.
+Current extension version: `0.10.0`.

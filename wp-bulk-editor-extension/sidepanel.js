@@ -6,6 +6,7 @@ const fixShortBoldHeadingsButton = document.querySelector("#fix-short-bold-headi
 const fixLeadingBoldLineButton = document.querySelector("#fix-leading-bold-line");
 const boldMaxCharsInput = document.querySelector("#bold-max-chars");
 const boldHeadingMaxWordsInput = document.querySelector("#bold-heading-max-words");
+const resaveNoDataButton = document.querySelector("#resave-no-data");
 const makeHeadingsH2Button = document.querySelector("#make-headings-h2");
 const applyButton = document.querySelector("#apply-h2");
 const inspectButton = document.querySelector("#inspect-block");
@@ -38,6 +39,39 @@ function isWordPressEditorUrl(url = "") {
   }
 }
 
+function isWordPressListUrl(url = "") {
+  try {
+    return new URL(url).pathname.endsWith("/wp-admin/edit.php");
+  } catch (_error) {
+    return false;
+  }
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function waitForTabLoad(tabId) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      chrome.tabs.onUpdated.removeListener(listener);
+      reject(new Error("Timed out waiting for the WordPress tab to load."));
+    }, 30000);
+
+    function listener(updatedTabId, changeInfo) {
+      if (updatedTabId !== tabId || changeInfo.status !== "complete") {
+        return;
+      }
+
+      clearTimeout(timeout);
+      chrome.tabs.onUpdated.removeListener(listener);
+      resolve();
+    }
+
+    chrome.tabs.onUpdated.addListener(listener);
+  });
+}
+
 async function getEditorTab() {
   const editorTabs = await chrome.tabs.query({
     url: ["*://*/wp-admin/post.php*", "*://*/wp-admin/post-new.php*"]
@@ -57,9 +91,8 @@ async function getEditorTab() {
   return activeTab;
 }
 
-async function runInEditorTab(action, payload = {}) {
-  const tab = await getEditorTab();
-  setDetails("Target tab: " + (tab.title || tab.url || "WordPress editor"));
+async function runInTab(tab, action, payload = {}) {
+  setDetails("Target tab: " + (tab.title || tab.url || "WordPress"));
 
   try {
     return await chrome.tabs.sendMessage(tab.id, {
@@ -68,9 +101,74 @@ async function runInEditorTab(action, payload = {}) {
       payload
     });
   } catch (error) {
-    throw new Error("Could not reach the WSU WDS content script. Reload the WordPress editor tab, then try again. " + (error.message || ""));
+    throw new Error("Could not reach the WSU WDS content script. Reload the WordPress tab, then try again. " + (error.message || ""));
   }
 }
+
+async function runInEditorTab(action, payload = {}) {
+  return runInTab(await getEditorTab(), action, payload);
+}
+
+async function getActiveWordPressTab() {
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+  if (!activeTab?.id) {
+    throw new Error("Click the WordPress tab, then run this utility again.");
+  }
+
+  return activeTab;
+}
+
+
+resaveNoDataButton.addEventListener("click", async () => {
+  resaveNoDataButton.disabled = true;
+  setStatus("Scanning visible list rows...");
+  setDetails("");
+
+  try {
+    const tab = await getActiveWordPressTab();
+
+    if (!isWordPressListUrl(tab.url)) {
+      throw new Error("Open a WordPress Posts or Pages list screen first, then run this utility.");
+    }
+
+    const listUrl = tab.url;
+    const scan = await runInTab(tab, "scanAccessibilityNoDataRows");
+    const items = scan.items || [];
+
+    if (!items.length) {
+      setStatus("No visible No Data rows found.");
+      setDetails(scan.details || "Try increasing Screen Options items per page if more rows need checking.");
+      return;
+    }
+
+    const results = [];
+
+    for (const [index, item] of items.entries()) {
+      setStatus("Saving " + (index + 1) + " of " + items.length + "...");
+      setDetails("Opening: " + (item.title || item.url));
+      const loadPromise = waitForTabLoad(tab.id);
+      await chrome.tabs.update(tab.id, { url: item.url });
+      await loadPromise;
+      await delay(1200);
+
+      const response = await runInTab(tab, "saveCurrentPostForAccessibilityRefresh");
+      results.push((item.title || item.url) + ": " + response.message);
+      await delay(900);
+    }
+
+    setStatus("Re-saved " + items.length + " item" + (items.length === 1 ? "" : "s") + ".");
+    setDetails(results.join("\n"));
+    const returnLoad = waitForTabLoad(tab.id);
+    await chrome.tabs.update(tab.id, { url: listUrl });
+    await returnLoad;
+  } catch (error) {
+    setStatus(error.message || "Could not re-save No Data items.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    resaveNoDataButton.disabled = false;
+  }
+});
 
 fixHeadingOrderButton.addEventListener("click", async () => {
   fixHeadingOrderButton.disabled = true;

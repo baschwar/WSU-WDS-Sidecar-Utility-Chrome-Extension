@@ -613,6 +613,119 @@
           : 'No paragraph blocks found with a leading bold line, soft return, and following text.'
     };
   }
+
+  function getAccessibilityColumnIndex() {
+    const headers = Array.from(document.querySelectorAll('.wp-list-table thead th, .wp-list-table thead td'));
+    const index = headers.findIndex((header) => {
+      return (header.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase().includes('accessibility');
+    });
+
+    return index === -1 ? null : index;
+  }
+
+  function scanAccessibilityNoDataRows() {
+    const table = document.querySelector('.wp-list-table');
+
+    if (!table) {
+      return { ok: false, message: 'Open this on a WordPress Posts or Pages list screen first.', items: [] };
+    }
+
+    const columnIndex = getAccessibilityColumnIndex();
+
+    if (columnIndex === null) {
+      return { ok: false, message: 'Could not find an Accessibility column on this list screen.', items: [] };
+    }
+
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const items = rows.map((row) => {
+      const cells = Array.from(row.children);
+      const accessibilityCell = cells[columnIndex];
+      const accessibilityText = (accessibilityCell?.textContent || '').replace(/\s+/g, ' ').trim();
+
+      if (!/\bno data\b/i.test(accessibilityText)) {
+        return null;
+      }
+
+      const editLink = row.querySelector('a.row-title[href*="post.php"], .row-actions .edit a[href*="post.php"], a[href*="post.php"][href*="action=edit"]');
+
+      if (!editLink?.href) {
+        return null;
+      }
+
+      return {
+        title: (editLink.textContent || '').replace(/\s+/g, ' ').trim(),
+        url: editLink.href
+      };
+    }).filter(Boolean);
+
+    return {
+      ok: true,
+      message: 'Found ' + items.length + ' visible No Data item' + (items.length === 1 ? '' : 's') + '.',
+      items,
+      details: items.length
+        ? items.map((item) => item.title || item.url).join('\n')
+        : 'No visible rows in the Accessibility column contained No Data.'
+    };
+  }
+
+  function waitForEditorSaveToFinish() {
+    return new Promise((resolve) => {
+      const editorSelect = window.wp?.data?.select('core/editor');
+      let sawSaving = false;
+      const startedAt = Date.now();
+      const unsubscribe = window.wp.data.subscribe(() => {
+        const isSaving = Boolean(editorSelect?.isSavingPost?.());
+        const isAutosaving = Boolean(editorSelect?.isAutosavingPost?.());
+
+        if (isSaving || isAutosaving) {
+          sawSaving = true;
+          return;
+        }
+
+        if (sawSaving || Date.now() - startedAt > 12000) {
+          unsubscribe();
+          resolve();
+        }
+      });
+
+      setTimeout(() => {
+        unsubscribe();
+        resolve();
+      }, 20000);
+    });
+  }
+
+  async function saveCurrentPostForAccessibilityRefresh() {
+    if (!window.wp?.data) {
+      return { ok: false, message: 'Open this on a WordPress block editor page first.' };
+    }
+
+    const editorDispatch = window.wp.data.dispatch('core/editor');
+    const editorSelect = window.wp.data.select('core/editor');
+    const title = editorSelect?.getEditedPostAttribute?.('title') || document.title || 'Post';
+
+    if (!editorDispatch?.savePost) {
+      const updateButton = document.querySelector('.editor-post-publish-button, .editor-post-save-draft, button[aria-label="Save"]');
+
+      if (!updateButton) {
+        return { ok: false, message: 'Could not find a WordPress save/update control.' };
+      }
+
+      updateButton.click();
+      return { ok: true, message: 'Clicked save/update for ' + title + '.' };
+    }
+
+    const saveResult = editorDispatch.savePost();
+
+    if (saveResult?.then) {
+      await saveResult;
+    } else {
+      await waitForEditorSaveToFinish();
+    }
+
+    return { ok: true, message: 'Saved ' + title + '.' };
+  }
+
   const actions = {
     makeAllHeadingsH2,
     applyH2FontSize,
@@ -622,10 +735,12 @@
     unboldLongAllBoldParagraphs,
     removeNewTabFromLinks,
     convertShortAllBoldParagraphsToH2,
-    splitLeadingBoldLineToH2
+    splitLeadingBoldLineToH2,
+    scanAccessibilityNoDataRows,
+    saveCurrentPostForAccessibilityRefresh
   };
 
-  window.addEventListener('message', (event) => {
+  window.addEventListener('message', async (event) => {
     if (event.source !== window || event.data?.source !== 'WSU_WDS_CONTENT') {
       return;
     }
@@ -635,7 +750,7 @@
 
     try {
       response = action
-        ? action(event.data.payload || {})
+        ? await action(event.data.payload || {})
         : { ok: false, message: `Unknown action: ${event.data.action}` };
     } catch (error) {
       response = { ok: false, message: error.message || 'Page bridge action failed.', details: String(error?.stack || error) };
