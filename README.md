@@ -42,7 +42,10 @@ Important: after reloading or updating the extension, reload any open WordPress 
 ### Links
 
 - Replace URL-like link text with linked page titles.
+- Replace generic link text such as `here`, `click here`, and `read more` with linked page titles.
+- Unwrap `urldefense.com` links copied from email into their original destination URLs.
 - Remove open-in-new-tab behavior from rich text links.
+- Scan nested table/list rich text so link fixes can apply inside table cells and other structured block attributes.
 
 ### Text Cleanup
 
