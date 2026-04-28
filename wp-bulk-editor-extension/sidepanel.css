@@ -280,6 +280,11 @@ button.link-button {
   line-height: 1;
 }
 
+.tooltip-trigger:hover,
+.tooltip-trigger:focus {
+  cursor: none;
+}
+
 .tooltip-text {
   position: absolute;
   z-index: 10;
