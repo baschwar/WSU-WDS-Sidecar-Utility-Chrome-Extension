@@ -515,7 +515,7 @@
   }
 
 
-  function decodeUrlDefenseHref(href) {
+  function decodeTrackedHref(href) {
     let parsed;
 
     try {
@@ -524,21 +524,37 @@
       return '';
     }
 
-    if (!parsed.hostname.toLowerCase().endsWith('urldefense.com')) {
-      return '';
+    const hostname = parsed.hostname.toLowerCase();
+
+    if (hostname.endsWith('urldefense.com')) {
+      const match = parsed.href.match(/\/v\d+\/__(.*?)__/i);
+
+      if (!match?.[1]) {
+        return '';
+      }
+
+      try {
+        return decodeURIComponent(match[1]);
+      } catch (_error) {
+        return match[1];
+      }
     }
 
-    const match = parsed.href.match(/\/v\d+\/__(.*?)__/i);
+    if (hostname.endsWith('safelinks.protection.outlook.com')) {
+      const wrappedUrl = parsed.searchParams.get('url');
 
-    if (!match?.[1]) {
-      return '';
+      if (!wrappedUrl) {
+        return '';
+      }
+
+      try {
+        return decodeURIComponent(wrappedUrl);
+      } catch (_error) {
+        return wrappedUrl;
+      }
     }
 
-    try {
-      return decodeURIComponent(match[1]);
-    } catch (_error) {
-      return match[1];
-    }
+    return '';
   }
 
   function unwrapUrlDefenseLinksInHtml(html) {
@@ -548,7 +564,7 @@
 
     Array.from(template.content.querySelectorAll('a[href]')).forEach((anchor) => {
       const oldHref = anchor.getAttribute('href') || '';
-      const decodedHref = decodeUrlDefenseHref(oldHref);
+      const decodedHref = decodeTrackedHref(oldHref);
 
       if (!decodedHref) {
         return;
@@ -585,10 +601,10 @@
 
     return {
       ok: true,
-      message: 'Unwrapped ' + changes.length + ' URLDefense link' + (changes.length === 1 ? '' : 's') + '.',
+      message: 'Unwrapped ' + changes.length + ' tracked link' + (changes.length === 1 ? '' : 's') + '.',
       details: changes.length
         ? changes.join('\n')
-        : 'No urldefense.com links were found.'
+        : 'No URLDefense or Outlook Safe Links were found.'
     };
   }
 

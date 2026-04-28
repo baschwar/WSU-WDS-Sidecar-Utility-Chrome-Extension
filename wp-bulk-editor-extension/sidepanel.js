@@ -290,7 +290,7 @@ fixGenericLinkTextButton.addEventListener("click", () => {
 
 fixUrlDefenseLinksButton.addEventListener("click", async () => {
   fixUrlDefenseLinksButton.disabled = true;
-  setStatus("Unwrapping urldefense.com links...");
+  setStatus("Unwrapping tracked links...");
   setDetails("");
 
   try {
@@ -299,7 +299,7 @@ fixUrlDefenseLinksButton.addEventListener("click", async () => {
     setStatus(response.message);
     setDetails(response.details || "");
   } catch (error) {
-    setStatus(error.message || "Could not unwrap URLDefense links.");
+    setStatus(error.message || "Could not unwrap tracked links.");
     setDetails(String(error?.stack || error?.message || error));
   } finally {
     fixUrlDefenseLinksButton.disabled = false;
