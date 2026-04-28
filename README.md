@@ -21,28 +21,40 @@ Important: after reloading or updating the extension, reload any open WordPress 
 
 ## Current Utilities
 
-### Accessibility Fixes
+### Page/Post
+
+- Re-save visible Posts/Pages rows whose Accessibility column shows No Data so WordPress can regenerate accessibility checks on save.
+- Preserve existing post status when saving drafts, pending posts, or published posts.
+
+### Headings
 
 - Fix incorrect heading order by making content headings H2.
+- Make all content heading blocks H2.
+- Remove bold markup from heading blocks while preserving heading level and classes.
+- Apply WSU Display Options font-size classes to all H2 blocks while preserving unrelated Advanced classes.
+
+### Alt Tags
+
+- Set linked image alt text for images that link directly to full-size image files.
+- Generate reviewable image alt text suggestions from captions, media titles, filenames, and optional page title context.
+- Apply only checked alt text suggestions, with deselect-all support for long suggestion lists.
+
+### Links
+
 - Replace URL-like link text with linked page titles.
 - Remove open-in-new-tab behavior from rich text links.
-- Set linked image alt text for images that link directly to full-size image files.
+
+### Text Cleanup
+
 - Unbold long all-bold paragraphs by character threshold.
 - Convert short all-bold paragraphs to H2 xMedium by word threshold.
 - Split a leading bold line followed by a soft return into an H2 xMedium plus a following paragraph.
 
-### List Utilities
+### Interface
 
-- Re-save visible Posts/Pages rows whose Accessibility column shows No Data so WordPress can regenerate accessibility checks on save.
-
-### Heading Cleanup
-
-- Make all content heading blocks H2.
-
-### Heading Size
-
-- Apply WSU Display Options font-size classes to all H2 blocks.
-- Preserves unrelated Advanced classes.
+- Group utilities by Page/Post, Headings, Alt Tags, Links, and Text Cleanup.
+- Show status/details under the active utility card.
+- Provide compact controls and hover/focus help for utility headings.
 
 ## How It Works
 
@@ -76,4 +88,4 @@ Primary files:
 
 ## Version
 
-Current extension version: `0.10.1`.
+Current extension version: `0.11.0`.
