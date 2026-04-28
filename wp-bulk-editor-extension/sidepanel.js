@@ -1,5 +1,7 @@
 const fixHeadingOrderButton = document.querySelector("#fix-heading-order");
 const fixUrlLinkTextButton = document.querySelector("#fix-url-link-text");
+const fixGenericLinkTextButton = document.querySelector("#fix-generic-link-text");
+const fixUrlDefenseLinksButton = document.querySelector("#fix-urldefense-links");
 const fixNewTabLinksButton = document.querySelector("#fix-new-tab-links");
 const fixLinkedImageAltButton = document.querySelector("#fix-linked-image-alt");
 const suggestAltTextButton = document.querySelector("#suggest-alt-text");
@@ -233,16 +235,17 @@ fixHeadingOrderButton.addEventListener("click", async () => {
   }
 });
 
-fixUrlLinkTextButton.addEventListener("click", async () => {
-  fixUrlLinkTextButton.disabled = true;
-  setStatus("Finding URL link text...");
+async function replaceLinkTextWithTitles(options) {
+  const button = options.button;
+  button.disabled = true;
+  setStatus(options.findingMessage);
   setDetails("");
 
   try {
-    const scan = await runInEditorTab("scanUrlLinkText");
+    const scan = await runInEditorTab("scanLinkTextForTitles", { mode: options.mode });
 
     if (!scan.candidates?.length) {
-      setStatus("No URL link text found.");
+      setStatus(options.emptyMessage);
       setDetails(scan.details || "");
       return;
     }
@@ -250,15 +253,56 @@ fixUrlLinkTextButton.addEventListener("click", async () => {
     setStatus(`Fetching ${scan.candidates.length} page title${scan.candidates.length === 1 ? "" : "s"}...`);
     setDetails(scan.details || "");
     const titleMap = await fetchPageTitles(scan.candidates.map((candidate) => candidate.href));
-    const response = await runInEditorTab("applyUrlLinkTextTitles", { titleMap });
+    const response = await runInEditorTab("applyLinkTextTitles", {
+      mode: options.mode,
+      titleMap
+    });
 
     setStatus(response.message);
     setDetails(response.details || "");
   } catch (error) {
-    setStatus(error.message || "Could not fix URL link text.");
+    setStatus(error.message || options.errorMessage);
     setDetails(String(error?.stack || error?.message || error));
   } finally {
-    fixUrlLinkTextButton.disabled = false;
+    button.disabled = false;
+  }
+}
+
+fixUrlLinkTextButton.addEventListener("click", () => {
+  replaceLinkTextWithTitles({
+    button: fixUrlLinkTextButton,
+    mode: "url",
+    findingMessage: "Finding URL link text...",
+    emptyMessage: "No URL link text found.",
+    errorMessage: "Could not fix URL link text."
+  });
+});
+
+fixGenericLinkTextButton.addEventListener("click", () => {
+  replaceLinkTextWithTitles({
+    button: fixGenericLinkTextButton,
+    mode: "generic",
+    findingMessage: "Finding generic link text...",
+    emptyMessage: "No generic link text found.",
+    errorMessage: "Could not fix generic link text."
+  });
+});
+
+fixUrlDefenseLinksButton.addEventListener("click", async () => {
+  fixUrlDefenseLinksButton.disabled = true;
+  setStatus("Unwrapping urldefense.com links...");
+  setDetails("");
+
+  try {
+    const response = await runInEditorTab("unwrapUrlDefenseLinks");
+
+    setStatus(response.message);
+    setDetails(response.details || "");
+  } catch (error) {
+    setStatus(error.message || "Could not unwrap URLDefense links.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    fixUrlDefenseLinksButton.disabled = false;
   }
 });
 

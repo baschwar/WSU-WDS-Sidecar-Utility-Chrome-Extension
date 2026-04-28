@@ -107,13 +107,108 @@
     };
   }
 
+  const richTextAttributeKeys = [
+    'body',
+    'caption',
+    'citation',
+    'content',
+    'foot',
+    'head',
+    'html',
+    'text',
+    'value'
+  ];
+
+  function walkRichTextValue(value, visitor, attribute) {
+    if (typeof value === 'string') {
+      if (value.includes('<a')) {
+        visitor(attribute, value);
+      }
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => walkRichTextValue(item, visitor, attribute));
+      return;
+    }
+
+    if (value && typeof value === 'object') {
+      Object.values(value).forEach((item) => walkRichTextValue(item, visitor, attribute));
+    }
+  }
+
   function walkRichTextStrings(block, visitor) {
     const attributes = block.attributes || {};
-    ['content', 'value', 'citation', 'text', 'html'].forEach((key) => {
-      if (typeof attributes[key] === 'string' && attributes[key].includes('<a')) {
-        visitor(key, attributes[key]);
+    richTextAttributeKeys.forEach((key) => {
+      if (key in attributes) {
+        walkRichTextValue(attributes[key], visitor, key);
       }
     });
+  }
+
+  function transformRichTextValue(value, transformer) {
+    if (typeof value === 'string') {
+      if (!value.includes('<a')) {
+        return { value, changes: [] };
+      }
+
+      const result = transformer(value);
+      return {
+        value: result.changes.length ? result.html : value,
+        changes: result.changes
+      };
+    }
+
+    if (Array.isArray(value)) {
+      let changed = false;
+      const changes = [];
+      const nextValue = value.map((item) => {
+        const result = transformRichTextValue(item, transformer);
+        changed = changed || result.value !== item;
+        changes.push(...result.changes);
+        return result.value;
+      });
+
+      return { value: changed ? nextValue : value, changes };
+    }
+
+    if (value && typeof value === 'object') {
+      let changed = false;
+      const changes = [];
+      const nextValue = { ...value };
+
+      Object.keys(value).forEach((key) => {
+        const result = transformRichTextValue(value[key], transformer);
+        changed = changed || result.value !== value[key];
+        changes.push(...result.changes);
+        nextValue[key] = result.value;
+      });
+
+      return { value: changed ? nextValue : value, changes };
+    }
+
+    return { value, changes: [] };
+  }
+
+  function transformRichTextAttributes(block, transformer) {
+    const attributes = block.attributes || {};
+    const updates = {};
+    const changes = [];
+
+    richTextAttributeKeys.forEach((key) => {
+      if (!(key in attributes)) {
+        return;
+      }
+
+      const result = transformRichTextValue(attributes[key], transformer);
+
+      if (result.changes.length) {
+        updates[key] = result.value;
+        changes.push(...result.changes);
+      }
+    });
+
+    return { updates, changes };
   }
 
   function normalizeHref(href) {
@@ -148,7 +243,35 @@
     }
   }
 
-  function getLinkCandidates(html) {
+  function isGenericLinkText(text) {
+    const cleanText = (text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const genericTexts = new Set([
+      'click here',
+      'here',
+      'learn more',
+      'read more',
+      'more',
+      'this link',
+      'link',
+      'click this link',
+      'click the link',
+      'view more',
+      'see more',
+      'continue reading',
+      'download',
+      'download here',
+      'visit website',
+      'website'
+    ]);
+
+    return genericTexts.has(cleanText);
+  }
+
+  function linkTextNeedsTitle(text, href, mode) {
+    return mode === 'generic' ? isGenericLinkText(text) : linkNeedsTitle(text, href);
+  }
+
+  function getLinkCandidates(html, mode = 'url') {
     const template = document.createElement('template');
     template.innerHTML = html;
 
@@ -157,10 +280,10 @@
         href: normalizeHref(anchor.getAttribute('href')),
         text: anchor.textContent || ''
       }))
-      .filter((link) => link.href && linkNeedsTitle(link.text, link.href));
+      .filter((link) => link.href && linkTextNeedsTitle(link.text, link.href, mode));
   }
 
-  function scanUrlLinkText() {
+  function scanLinkTextForTitles(payload = {}) {
     if (!window.wp?.data) {
       return { ok: false, message: 'Open this on a WordPress block editor page first.', candidates: [] };
     }
@@ -170,7 +293,7 @@
 
     blocks.forEach((block) => {
       walkRichTextStrings(block, (attribute, value) => {
-        getLinkCandidates(value).forEach((link) => {
+        getLinkCandidates(value, payload?.mode || 'url').forEach((link) => {
           candidates.push({
             clientId: block.clientId,
             blockName: block.name,
@@ -184,13 +307,13 @@
 
     return {
       ok: true,
-      message: `Found ${candidates.length} URL-like link text item${candidates.length === 1 ? '' : 's'}.`,
+      message: `Found ${candidates.length} link text item${candidates.length === 1 ? '' : 's'}.`,
       candidates,
       details: candidates.map((candidate) => `${candidate.text} -> ${candidate.href}`).join('\n')
     };
   }
 
-  function replaceLinksInHtml(html, titleMap) {
+  function replaceLinksInHtml(html, titleMap, mode = 'url') {
     const template = document.createElement('template');
     template.innerHTML = html;
     const changes = [];
@@ -200,7 +323,7 @@
       const title = href ? titleMap[href] : '';
       const oldText = anchor.textContent || '';
 
-      if (!title || !linkNeedsTitle(oldText, href)) {
+      if (!title || !linkTextNeedsTitle(oldText, href, mode)) {
         return;
       }
 
@@ -214,7 +337,7 @@
     };
   }
 
-  function applyUrlLinkTextTitles(payload) {
+  function applyLinkTextTitles(payload) {
     if (!window.wp?.data) {
       return { ok: false, message: 'Open this on a WordPress block editor page first.' };
     }
@@ -225,19 +348,13 @@
     let changedBlocks = 0;
 
     blocks.forEach((block) => {
-      const updates = {};
-
-      walkRichTextStrings(block, (attribute, value) => {
-        const result = replaceLinksInHtml(value, titleMap);
-
-        if (result.changes.length) {
-          updates[attribute] = result.html;
-          changes.push(...result.changes);
-        }
+      const result = transformRichTextAttributes(block, (value) => {
+        return replaceLinksInHtml(value, titleMap, payload?.mode || 'url');
       });
 
-      if (Object.keys(updates).length) {
-        window.wp.data.dispatch('core/block-editor').updateBlockAttributes(block.clientId, updates);
+      if (Object.keys(result.updates).length) {
+        window.wp.data.dispatch('core/block-editor').updateBlockAttributes(block.clientId, result.updates);
+        changes.push(...result.changes);
         changedBlocks += 1;
       }
     });
@@ -397,6 +514,84 @@
     };
   }
 
+
+  function decodeUrlDefenseHref(href) {
+    let parsed;
+
+    try {
+      parsed = new URL(href, window.location.href);
+    } catch (_error) {
+      return '';
+    }
+
+    if (!parsed.hostname.toLowerCase().endsWith('urldefense.com')) {
+      return '';
+    }
+
+    const match = parsed.href.match(/\/v\d+\/__(.*?)__/i);
+
+    if (!match?.[1]) {
+      return '';
+    }
+
+    try {
+      return decodeURIComponent(match[1]);
+    } catch (_error) {
+      return match[1];
+    }
+  }
+
+  function unwrapUrlDefenseLinksInHtml(html) {
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    const changes = [];
+
+    Array.from(template.content.querySelectorAll('a[href]')).forEach((anchor) => {
+      const oldHref = anchor.getAttribute('href') || '';
+      const decodedHref = decodeUrlDefenseHref(oldHref);
+
+      if (!decodedHref) {
+        return;
+      }
+
+      anchor.setAttribute('href', decodedHref);
+      changes.push(oldHref + ' -> ' + decodedHref);
+    });
+
+    return {
+      html: template.innerHTML,
+      changes
+    };
+  }
+
+  function unwrapUrlDefenseLinks() {
+    if (!window.wp?.data) {
+      return { ok: false, message: 'Open this on a WordPress block editor page first.' };
+    }
+
+    const blocks = collectBlocks(getEditorBlocks(), () => true);
+    const changes = [];
+    let changedBlocks = 0;
+
+    blocks.forEach((block) => {
+      const result = transformRichTextAttributes(block, unwrapUrlDefenseLinksInHtml);
+
+      if (Object.keys(result.updates).length) {
+        window.wp.data.dispatch('core/block-editor').updateBlockAttributes(block.clientId, result.updates);
+        changes.push(...result.changes);
+        changedBlocks += 1;
+      }
+    });
+
+    return {
+      ok: true,
+      message: 'Unwrapped ' + changes.length + ' URLDefense link' + (changes.length === 1 ? '' : 's') + '.',
+      details: changes.length
+        ? changes.join('\n')
+        : 'No urldefense.com links were found.'
+    };
+  }
+
   function removeNewTabAttributesFromHtml(html) {
     const template = document.createElement('template');
     template.innerHTML = html;
@@ -440,19 +635,11 @@
     let changedBlocks = 0;
 
     blocks.forEach((block) => {
-      const updates = {};
+      const result = transformRichTextAttributes(block, removeNewTabAttributesFromHtml);
 
-      walkRichTextStrings(block, (attribute, value) => {
-        const result = removeNewTabAttributesFromHtml(value);
-
-        if (result.changes.length) {
-          updates[attribute] = result.html;
-          changes.push(...result.changes);
-        }
-      });
-
-      if (Object.keys(updates).length) {
-        window.wp.data.dispatch('core/block-editor').updateBlockAttributes(block.clientId, updates);
+      if (Object.keys(result.updates).length) {
+        window.wp.data.dispatch('core/block-editor').updateBlockAttributes(block.clientId, result.updates);
+        changes.push(...result.changes);
         changedBlocks += 1;
       }
     });
@@ -1115,8 +1302,9 @@
     applyH2FontSize,
     unboldHeadingBlocks,
     inspectSelectedBlock,
-    scanUrlLinkText,
-    applyUrlLinkTextTitles,
+    scanLinkTextForTitles,
+    applyLinkTextTitles,
+    unwrapUrlDefenseLinks,
     unboldLongAllBoldParagraphs,
     removeNewTabFromLinks,
     setLinkedImageAltToDestination,
