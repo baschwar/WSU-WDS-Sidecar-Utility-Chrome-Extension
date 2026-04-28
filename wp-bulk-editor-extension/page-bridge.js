@@ -249,6 +249,54 @@
     };
   }
 
+
+  function removeBoldMarkupFromHtml(html) {
+    const template = document.createElement('template');
+    template.innerHTML = html || '';
+
+    Array.from(template.content.querySelectorAll('strong, b')).forEach((element) => {
+      element.replaceWith(...Array.from(element.childNodes));
+    });
+
+    return template.innerHTML;
+  }
+
+  function unboldHeadingBlocks() {
+    if (!window.wp?.data) {
+      return { ok: false, message: 'Open this on a WordPress block editor page first.' };
+    }
+
+    const headingBlocks = collectBlocks(getEditorBlocks(), (block) => block.name === 'core/heading');
+    const changes = [];
+
+    headingBlocks.forEach((block) => {
+      const content = block.attributes?.content;
+
+      if (typeof content !== 'string' || !/<\/?(?:strong|b)\b/i.test(content)) {
+        return;
+      }
+
+      const nextContent = removeBoldMarkupFromHtml(content);
+
+      if (nextContent === content) {
+        return;
+      }
+
+      window.wp.data.dispatch('core/block-editor').updateBlockAttributes(block.clientId, {
+        content: nextContent
+      });
+      changes.push(getTextContentFromHtml(nextContent) || 'Heading');
+    });
+
+    return {
+      ok: true,
+      message: 'Unbolded ' + changes.length + ' heading block' + (changes.length === 1 ? '' : 's') + '.',
+      details: changes.length
+        ? changes.map((text) => 'Unbolded: ' + text).join('\n')
+        : 'No heading blocks with bold markup were found.'
+    };
+  }
+
   function getTextContentFromHtml(html) {
     const template = document.createElement('template');
     template.innerHTML = html;
@@ -1065,6 +1113,7 @@
   const actions = {
     makeAllHeadingsH2,
     applyH2FontSize,
+    unboldHeadingBlocks,
     inspectSelectedBlock,
     scanUrlLinkText,
     applyUrlLinkTextTitles,

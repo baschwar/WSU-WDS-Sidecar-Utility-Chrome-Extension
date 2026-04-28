@@ -15,14 +15,41 @@ const boldMaxCharsInput = document.querySelector("#bold-max-chars");
 const boldHeadingMaxWordsInput = document.querySelector("#bold-heading-max-words");
 const resaveNoDataButton = document.querySelector("#resave-no-data");
 const makeHeadingsH2Button = document.querySelector("#make-headings-h2");
+const unboldHeadingBlocksButton = document.querySelector("#unbold-heading-blocks");
 const applyButton = document.querySelector("#apply-h2");
 const inspectButton = document.querySelector("#inspect-block");
 const fontSizeSelect = document.querySelector("#font-size");
+const feedbackEl = document.querySelector("#feedback");
 const statusEl = document.querySelector("#status");
 const detailsEl = document.querySelector("#details");
 
 const SIZE_VALUES = ["Medium", "xMedium", "xxMedium", "Large", "xLarge", "xxLarge"];
 let currentAltSuggestions = [];
+
+function moveFeedbackToButton(button) {
+  if (button.closest('.tooltip-heading') || button.classList.contains('tooltip-trigger')) {
+    return;
+  }
+
+  const card = button.closest('.utility-card') || button.closest('.panel');
+
+  if (!card) {
+    return;
+  }
+
+  card.appendChild(feedbackEl);
+  feedbackEl.hidden = false;
+}
+
+document.addEventListener('click', (event) => {
+  const button = event.target.closest('button');
+
+  if (!button) {
+    return;
+  }
+
+  moveFeedbackToButton(button);
+});
 
 function setStatus(message) {
   statusEl.textContent = message;
@@ -88,6 +115,7 @@ async function getEditorTab() {
   }
 
   const editorTabs = await chrome.tabs.query({
+    currentWindow: true,
     url: [
       "*://*/wp-admin/post.php*",
       "*://*/wp-admin/post-new.php*",
@@ -528,6 +556,25 @@ makeHeadingsH2Button.addEventListener("click", async () => {
     setDetails(String(error?.stack || error?.message || error));
   } finally {
     makeHeadingsH2Button.disabled = false;
+  }
+});
+
+
+unboldHeadingBlocksButton.addEventListener("click", async () => {
+  unboldHeadingBlocksButton.disabled = true;
+  setStatus("Removing bold markup from headings...");
+  setDetails("");
+
+  try {
+    const response = await runInEditorTab("unboldHeadingBlocks");
+
+    setStatus(response.message);
+    setDetails(response.details || "");
+  } catch (error) {
+    setStatus(error.message || "Could not unbold headings.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    unboldHeadingBlocksButton.disabled = false;
   }
 });
 

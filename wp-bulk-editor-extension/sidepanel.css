@@ -29,6 +29,8 @@ h2 {
   color: #1f2933;
   font-size: 12px;
   line-height: 1.25;
+  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 h3 {
@@ -48,11 +50,16 @@ p {
 .panel {
   display: grid;
   gap: 7px;
-  margin-bottom: 8px;
+  margin-bottom: 9px;
   padding: 9px;
   border: 1px solid #d8dee8;
   border-radius: 8px;
   background: #ffffff;
+}
+
+.panel-primary {
+  border-color: #bfdbfe;
+  background: #f8fbff;
 }
 
 .utility-card {
@@ -62,6 +69,19 @@ p {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   background: #f8fafc;
+}
+
+.compact-card {
+  grid-template-columns: minmax(92px, 0.75fr) minmax(0, 1.25fr);
+  align-items: center;
+}
+
+.compact-card .tooltip-heading {
+  min-width: 0;
+}
+
+.compact-card > button {
+  justify-self: end;
 }
 
 label {
@@ -94,8 +114,10 @@ input {
 }
 
 button {
+  width: fit-content;
+  justify-self: start;
   border: 0;
-  padding: 0 9px;
+  padding: 0 10px;
   color: #ffffff;
   background: #2563eb;
   font-weight: 700;
@@ -113,15 +135,25 @@ button:disabled {
   opacity: 0.65;
 }
 
+.feedback {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+  margin-top: 2px;
+  padding-top: 6px;
+  border-top: 1px solid #e2e8f0;
+}
+
 #status {
-  min-height: 18px;
-  margin-top: 10px;
-  color: #334155;
+  min-height: 16px;
+  margin: 0;
+  color: #a20f2d;
+  font-weight: 800;
 }
 
 #details {
-  max-height: 150px;
-  margin: 8px 0 0;
+  max-height: 130px;
+  margin: 0;
   padding: 7px;
   overflow: auto;
   border: 1px solid #d8dee8;
@@ -215,9 +247,13 @@ button.link-button {
 
 
 .button-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
+}
+
+.button-row button {
+  flex: 0 0 auto;
 }
 
 
@@ -265,4 +301,11 @@ button.link-button {
 .tooltip-heading:hover .tooltip-text,
 .tooltip-heading:focus-within .tooltip-text {
   display: block;
+}
+
+
+@media (max-width: 340px) {
+  .compact-card {
+    grid-template-columns: 1fr;
+  }
 }
