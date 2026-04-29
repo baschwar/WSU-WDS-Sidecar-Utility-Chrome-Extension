@@ -23,21 +23,67 @@
 
       <section class="panel">
         <h2>Headings</h2>
-        <div class="utility-card compact-card">
-          <h3 class="tooltip-heading"><span>Fix Heading Order</span><button class="tooltip-trigger" type="button" aria-label="Change content heading blocks to H2 to clear incorrect heading order alerts. The post/page title is not touched.">?</button><span class="tooltip-text" role="tooltip">Change content heading blocks to H2 to clear incorrect heading order alerts. The post/page title is not touched.</span></h3>
-          <button id="fix-heading-order" type="button">Run</button>
+        <div class="action-grid">
+          <div class="utility-card compact-card">
+            <h3 class="tooltip-heading"><span>Fix Heading Order</span><button class="tooltip-trigger" type="button" aria-label="Change content heading blocks to H2 to clear incorrect heading order alerts. The post/page title is not touched.">?</button><span class="tooltip-text" role="tooltip">Change content heading blocks to H2 to clear incorrect heading order alerts. The post/page title is not touched.</span></h3>
+            <button id="fix-heading-order" type="button">Run</button>
+          </div>
+          <div class="utility-card compact-card">
+            <h3 class="tooltip-heading"><span>Make All H2</span><button class="tooltip-trigger" type="button" aria-label="Convert all content heading blocks to H2. The post/page title is not touched.">?</button><span class="tooltip-text" role="tooltip">Convert all content heading blocks to H2. The post/page title is not touched.</span></h3>
+            <button id="make-headings-h2" type="button">Run</button>
+          </div>
+          <div class="utility-card compact-card">
+            <h3 class="tooltip-heading"><span>Unbold Headings</span><button class="tooltip-trigger" type="button" aria-label="Remove bold markup from heading block text while preserving heading level and classes.">?</button><span class="tooltip-text" role="tooltip">Remove bold markup from heading block text while preserving heading level and classes.</span></h3>
+            <button id="unbold-heading-blocks" type="button">Run</button>
+          </div>
         </div>
-        <div class="utility-card compact-card">
-          <h3 class="tooltip-heading"><span>Make All Headings H2</span><button class="tooltip-trigger" type="button" aria-label="Convert all content heading blocks to H2. The post/page title is not touched.">?</button><span class="tooltip-text" role="tooltip">Convert all content heading blocks to H2. The post/page title is not touched.</span></h3>
-          <button id="make-headings-h2" type="button">Run</button>
+        <div class="utility-card">
+          <h3 class="tooltip-heading"><span>Change Heading Level</span><button class="tooltip-trigger" type="button" aria-label="Change all heading blocks of one selected level to another level while preserving content and classes.">?</button><span class="tooltip-text" role="tooltip">Change all heading blocks of one selected level to another level while preserving content and classes.</span></h3>
+          <div class="rule-row split-row">
+            <label for="heading-level-from">From</label>
+            <select id="heading-level-from">
+              <option value="1">H1</option>
+              <option value="2">H2</option>
+              <option value="3" selected>H3</option>
+              <option value="4">H4</option>
+              <option value="5">H5</option>
+              <option value="6">H6</option>
+            </select>
+            <label for="heading-level-to">To</label>
+            <select id="heading-level-to">
+              <option value="1">H1</option>
+              <option value="2" selected>H2</option>
+              <option value="3">H3</option>
+              <option value="4">H4</option>
+              <option value="5">H5</option>
+              <option value="6">H6</option>
+            </select>
+            <button id="change-heading-level" type="button">Apply</button>
+          </div>
         </div>
-        <div class="utility-card compact-card">
-          <h3 class="tooltip-heading"><span>Unbold Headings</span><button class="tooltip-trigger" type="button" aria-label="Remove bold markup from heading block text while preserving heading level and classes.">?</button><span class="tooltip-text" role="tooltip">Remove bold markup from heading block text while preserving heading level and classes.</span></h3>
-          <button id="unbold-heading-blocks" type="button">Run</button>
+        <div class="utility-card">
+          <h3 class="tooltip-heading"><span>Select Heading Blocks</span><button class="tooltip-trigger" type="button" aria-label="List individual heading blocks so selected items can be changed to a chosen heading level.">?</button><span class="tooltip-text" role="tooltip">List individual heading blocks so selected items can be changed to a chosen heading level.</span></h3>
+          <div class="heading-scan-row">
+            <button id="scan-heading-blocks" type="button">Scan</button>
+            <label for="selected-heading-level">Change ☑</label>
+            <select id="selected-heading-level">
+              <option value="1">H1</option>
+              <option value="2" selected>H2</option>
+              <option value="3">H3</option>
+              <option value="4">H4</option>
+              <option value="5">H5</option>
+              <option value="6">H6</option>
+            </select>
+            <button id="apply-selected-heading-level" type="button">Apply</button>
+          </div>
+          <div id="heading-block-list" class="suggestion-list compact-list" hidden></div>
+          <div class="button-row" id="heading-block-actions" hidden>
+            <button id="deselect-heading-blocks" class="secondary" type="button">Deselect</button>
+          </div>
         </div>
         <div class="utility-card">
           <h3 class="tooltip-heading"><span>Set H2 Size</span><button class="tooltip-trigger" type="button" aria-label="Apply a WSU font-size class to every H2 block while preserving unrelated Advanced classes.">?</button><span class="tooltip-text" role="tooltip">Apply a WSU font-size class to every H2 block while preserving unrelated Advanced classes.</span></h3>
-          <div class="rule-row">
+          <div class="rule-row h2-size-row">
             <label for="font-size">Make H2 =</label>
             <select id="font-size">
               <option value="">Default</option>
@@ -48,8 +94,6 @@
               <option value="xLarge">xLarge</option>
               <option value="xxLarge">xxLarge</option>
             </select>
-          </div>
-          <div class="button-row">
             <button id="apply-h2" type="button">Apply</button>
             <button id="inspect-block" class="secondary" type="button">Inspect</button>
           </div>
@@ -64,8 +108,10 @@
         </div>
         <div class="utility-card">
           <h3 class="tooltip-heading"><span>Suggest Alt Text</span><button class="tooltip-trigger" type="button" aria-label="Scan image blocks with missing or suspicious alt text, generate editable suggestions, and apply only checked items.">?</button><span class="tooltip-text" role="tooltip">Scan image blocks with missing or suspicious alt text, generate editable suggestions, and apply only checked items.</span></h3>
-          <label class="compact-check"><input id="include-page-title-alt" type="checkbox" checked> Include page title</label>
-          <button id="suggest-alt-text" type="button">Generate</button>
+          <div class="alt-suggest-row">
+            <label class="compact-check"><input id="include-page-title-alt" type="checkbox" checked> Include page title</label>
+            <button id="suggest-alt-text" type="button">Generate</button>
+          </div>
           <div id="alt-suggestions" class="suggestion-list" hidden></div>
           <div class="button-row" id="alt-suggestion-actions" hidden>
             <button id="deselect-alt-suggestions" class="secondary" type="button">Deselect all</button>
@@ -76,21 +122,23 @@
 
       <section class="panel">
         <h2>Links</h2>
-        <div class="utility-card compact-card">
-          <h3 class="tooltip-heading"><span>Replace URL Link Text</span><button class="tooltip-trigger" type="button" aria-label="Find links whose visible text is a URL and replace that text with the linked page title.">?</button><span class="tooltip-text" role="tooltip">Find links whose visible text is a URL and replace that text with the linked page title.</span></h3>
-          <button id="fix-url-link-text" type="button">Run</button>
-        </div>
-        <div class="utility-card compact-card">
-          <h3 class="tooltip-heading"><span>Replace Generic Link Text</span><button class="tooltip-trigger" type="button" aria-label="Find generic link text like here, click here, and read more, then replace it with the linked page title.">?</button><span class="tooltip-text" role="tooltip">Find generic link text like here, click here, and read more, then replace it with the linked page title.</span></h3>
-          <button id="fix-generic-link-text" type="button">Run</button>
-        </div>
-        <div class="utility-card compact-card">
-          <h3 class="tooltip-heading"><span>Unwrap Tracked Links</span><button class="tooltip-trigger" type="button" aria-label="Replace URLDefense and Outlook Safe Links wrapper URLs with the decoded original destination URL.">?</button><span class="tooltip-text" role="tooltip">Replace URLDefense and Outlook Safe Links wrapper URLs with the decoded original destination URL.</span></h3>
-          <button id="fix-urldefense-links" type="button">Run</button>
-        </div>
-        <div class="utility-card compact-card">
-          <h3 class="tooltip-heading"><span>Remove Open-In-New-Tab</span><button class="tooltip-trigger" type="button" aria-label="Remove open-in-new-tab behavior from rich text links while preserving other link settings.">?</button><span class="tooltip-text" role="tooltip">Remove open-in-new-tab behavior from rich text links while preserving other link settings.</span></h3>
-          <button id="fix-new-tab-links" type="button">Run</button>
+        <div class="action-grid">
+          <div class="utility-card compact-card">
+            <h3 class="tooltip-heading"><span>URL Link Text</span><button class="tooltip-trigger" type="button" aria-label="Find links whose visible text is a URL and replace that text with the linked page title.">?</button><span class="tooltip-text" role="tooltip">Find links whose visible text is a URL and replace that text with the linked page title.</span></h3>
+            <button id="fix-url-link-text" type="button">Run</button>
+          </div>
+          <div class="utility-card compact-card">
+            <h3 class="tooltip-heading"><span>Generic Link Text</span><button class="tooltip-trigger" type="button" aria-label="Find generic link text like here, click here, and read more, then replace it with the linked page title.">?</button><span class="tooltip-text" role="tooltip">Find generic link text like here, click here, and read more, then replace it with the linked page title.</span></h3>
+            <button id="fix-generic-link-text" type="button">Run</button>
+          </div>
+          <div class="utility-card compact-card">
+            <h3 class="tooltip-heading"><span>Tracked Links</span><button class="tooltip-trigger" type="button" aria-label="Replace URLDefense and Outlook Safe Links wrapper URLs with the decoded original destination URL.">?</button><span class="tooltip-text" role="tooltip">Replace URLDefense and Outlook Safe Links wrapper URLs with the decoded original destination URL.</span></h3>
+            <button id="fix-urldefense-links" type="button">Run</button>
+          </div>
+          <div class="utility-card compact-card">
+            <h3 class="tooltip-heading"><span>New-Tab Links</span><button class="tooltip-trigger" type="button" aria-label="Remove open-in-new-tab behavior from rich text links while preserving other link settings.">?</button><span class="tooltip-text" role="tooltip">Remove open-in-new-tab behavior from rich text links while preserving other link settings.</span></h3>
+            <button id="fix-new-tab-links" type="button">Run</button>
+          </div>
         </div>
       </section>
 

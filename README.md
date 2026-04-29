@@ -31,6 +31,8 @@ Important: after reloading or updating the extension, reload any open WordPress 
 - Fix incorrect heading order by making content headings H2.
 - Make all content heading blocks H2.
 - Remove bold markup from heading blocks while preserving heading level and classes.
+- Change all heading blocks from one selected level to another selected level, such as H3 to H2 or H2 to H4.
+- Scan individual heading blocks, select or deselect specific headings, and change only checked headings to a chosen H1-H6 level.
 - Apply WSU Display Options font-size classes to all H2 blocks while preserving unrelated Advanced classes.
 
 ### Alt Tags
@@ -58,6 +60,7 @@ Important: after reloading or updating the extension, reload any open WordPress 
 - Group utilities by Page/Post, Headings, Alt Tags, Links, and Text Cleanup.
 - Show status/details under the active utility card.
 - Provide compact controls and hover/focus help for utility headings.
+- Use compact two-column action grids for simple Heading and Link cleanup utilities.
 
 ## How It Works
 
@@ -91,4 +94,4 @@ Primary files:
 
 ## Version
 
-Current extension version: `0.11.0`.
+Current extension version: `0.12.0`.

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "WSU WDS Sidecar Utilities",
   "description": "Sidecar utilities for bulk-editing WordPress block editor content.",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "permissions": [
     "activeTab",
     "sidePanel"

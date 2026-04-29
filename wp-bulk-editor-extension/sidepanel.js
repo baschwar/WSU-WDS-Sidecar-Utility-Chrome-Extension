@@ -18,6 +18,15 @@ const boldHeadingMaxWordsInput = document.querySelector("#bold-heading-max-words
 const resaveNoDataButton = document.querySelector("#resave-no-data");
 const makeHeadingsH2Button = document.querySelector("#make-headings-h2");
 const unboldHeadingBlocksButton = document.querySelector("#unbold-heading-blocks");
+const changeHeadingLevelButton = document.querySelector("#change-heading-level");
+const headingLevelFromSelect = document.querySelector("#heading-level-from");
+const headingLevelToSelect = document.querySelector("#heading-level-to");
+const scanHeadingBlocksButton = document.querySelector("#scan-heading-blocks");
+const applySelectedHeadingLevelButton = document.querySelector("#apply-selected-heading-level");
+const deselectHeadingBlocksButton = document.querySelector("#deselect-heading-blocks");
+const selectedHeadingLevelSelect = document.querySelector("#selected-heading-level");
+const headingBlockListEl = document.querySelector("#heading-block-list");
+const headingBlockActionsEl = document.querySelector("#heading-block-actions");
 const applyButton = document.querySelector("#apply-h2");
 const inspectButton = document.querySelector("#inspect-block");
 const fontSizeSelect = document.querySelector("#font-size");
@@ -27,6 +36,7 @@ const detailsEl = document.querySelector("#details");
 
 const SIZE_VALUES = ["Medium", "xMedium", "xxMedium", "Large", "xLarge", "xxLarge"];
 let currentAltSuggestions = [];
+let currentHeadingBlocks = [];
 
 function moveFeedbackToButton(button) {
   if (button.closest('.tooltip-heading') || button.classList.contains('tooltip-trigger')) {
@@ -619,6 +629,109 @@ unboldHeadingBlocksButton.addEventListener("click", async () => {
     setDetails(String(error?.stack || error?.message || error));
   } finally {
     unboldHeadingBlocksButton.disabled = false;
+  }
+});
+
+changeHeadingLevelButton.addEventListener("click", async () => {
+  changeHeadingLevelButton.disabled = true;
+  setStatus("Changing heading levels...");
+  setDetails("");
+
+  try {
+    const fromLevel = Number.parseInt(headingLevelFromSelect.value, 10);
+    const toLevel = Number.parseInt(headingLevelToSelect.value, 10);
+    const response = await runInEditorTab("changeHeadingLevel", { fromLevel, toLevel });
+
+    setStatus(response.message);
+    setDetails(response.details || "");
+  } catch (error) {
+    setStatus(error.message || "Could not change heading levels.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    changeHeadingLevelButton.disabled = false;
+  }
+});
+
+function renderHeadingBlocks(items, checked = true) {
+  currentHeadingBlocks = items || [];
+  headingBlockListEl.textContent = "";
+  headingBlockListEl.hidden = !currentHeadingBlocks.length;
+  headingBlockActionsEl.hidden = !currentHeadingBlocks.length;
+
+  currentHeadingBlocks.forEach((item, index) => {
+    const row = document.createElement("label");
+    row.className = "heading-block-row";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = checked;
+    checkbox.dataset.index = String(index);
+
+    const text = document.createElement("span");
+    text.textContent = "H" + item.level + ": " + (item.text || "Heading");
+
+    row.append(checkbox, text);
+    headingBlockListEl.append(row);
+  });
+}
+
+scanHeadingBlocksButton.addEventListener("click", async () => {
+  scanHeadingBlocksButton.disabled = true;
+  headingBlockActionsEl.hidden = true;
+  headingBlockListEl.hidden = true;
+  headingBlockListEl.textContent = "";
+  setStatus("Scanning heading blocks...");
+  setDetails("");
+
+  try {
+    const response = await runInEditorTab("scanHeadingBlocks");
+
+    renderHeadingBlocks(response.items || []);
+    setStatus(response.message);
+    setDetails(response.details || "");
+  } catch (error) {
+    setStatus(error.message || "Could not scan heading blocks.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    scanHeadingBlocksButton.disabled = false;
+  }
+});
+
+deselectHeadingBlocksButton.addEventListener("click", () => {
+  headingBlockListEl.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+    checkbox.checked = false;
+  });
+});
+
+applySelectedHeadingLevelButton.addEventListener("click", async () => {
+  applySelectedHeadingLevelButton.disabled = true;
+  setStatus("Changing checked heading blocks...");
+  setDetails("");
+
+  try {
+    const targetLevel = Number.parseInt(selectedHeadingLevelSelect.value, 10);
+    const clientIds = Array.from(headingBlockListEl.querySelectorAll('input[type="checkbox"]:checked')).map((checkbox) => {
+      const item = currentHeadingBlocks[Number.parseInt(checkbox.dataset.index, 10)];
+      return item?.clientId;
+    }).filter(Boolean);
+
+    if (!clientIds.length) {
+      setStatus("No checked heading blocks to change.");
+      return;
+    }
+
+    const response = await runInEditorTab("changeSelectedHeadingBlocks", { clientIds, targetLevel });
+
+    setStatus(response.message);
+    setDetails(response.details || "");
+    renderHeadingBlocks((currentHeadingBlocks || []).map((item) => (
+      clientIds.includes(item.clientId) ? { ...item, level: targetLevel } : item
+    )), false);
+  } catch (error) {
+    setStatus(error.message || "Could not change checked heading blocks.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    applySelectedHeadingLevelButton.disabled = false;
   }
 });
 

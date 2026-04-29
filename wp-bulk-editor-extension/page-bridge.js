@@ -43,6 +43,111 @@
     };
   }
 
+  function isHeadingLevel(value) {
+    return Number.isInteger(value) && value >= 1 && value <= 6;
+  }
+
+  function getHeadingLevel(block) {
+    return block.attributes?.level || 2;
+  }
+
+  function changeHeadingLevel(payload) {
+    if (!window.wp?.data) {
+      return { ok: false, message: 'Open this on a WordPress block editor page first.' };
+    }
+
+    const fromLevel = Number.parseInt(payload?.fromLevel, 10);
+    const toLevel = Number.parseInt(payload?.toLevel, 10);
+
+    if (!isHeadingLevel(fromLevel) || !isHeadingLevel(toLevel)) {
+      return { ok: false, message: 'Choose heading levels from H1 through H6.' };
+    }
+
+    if (fromLevel === toLevel) {
+      return { ok: true, message: 'No heading levels changed.', details: 'From and To are both H' + fromLevel + '.' };
+    }
+
+    const headingBlocks = collectBlocks(getEditorBlocks(), (block) => block.name === 'core/heading');
+    const matchingBlocks = headingBlocks.filter((block) => getHeadingLevel(block) === fromLevel);
+
+    matchingBlocks.forEach((block) => {
+      window.wp.data.dispatch('core/block-editor').updateBlockAttributes(block.clientId, {
+        level: toLevel
+      });
+    });
+
+    return {
+      ok: true,
+      message: 'Changed ' + matchingBlocks.length + ' H' + fromLevel + ' heading' + (matchingBlocks.length === 1 ? '' : 's') + ' to H' + toLevel + '.',
+      details: matchingBlocks.length
+        ? matchingBlocks.map((block) => 'Changed: ' + getTextContentFromHtml(block.attributes?.content || 'Heading')).join('\n')
+        : 'No H' + fromLevel + ' heading blocks were found. Post title was not touched.'
+    };
+  }
+
+  function scanHeadingBlocks() {
+    if (!window.wp?.data) {
+      return { ok: false, message: 'Open this on a WordPress block editor page first.', items: [] };
+    }
+
+    const headingBlocks = collectBlocks(getEditorBlocks(), (block) => block.name === 'core/heading');
+    const items = headingBlocks.map((block) => ({
+      clientId: block.clientId,
+      level: getHeadingLevel(block),
+      text: getTextContentFromHtml(block.attributes?.content || 'Heading')
+    }));
+
+    return {
+      ok: true,
+      message: 'Found ' + items.length + ' heading block' + (items.length === 1 ? '' : 's') + '.',
+      items,
+      details: items.length
+        ? items.map((item) => 'H' + item.level + ': ' + item.text).join('\n')
+        : 'No heading blocks were found in post content. Post title was not included.'
+    };
+  }
+
+  function changeSelectedHeadingBlocks(payload) {
+    if (!window.wp?.data) {
+      return { ok: false, message: 'Open this on a WordPress block editor page first.' };
+    }
+
+    const targetLevel = Number.parseInt(payload?.targetLevel, 10);
+    const clientIds = Array.isArray(payload?.clientIds) ? payload.clientIds : [];
+
+    if (!isHeadingLevel(targetLevel)) {
+      return { ok: false, message: 'Choose a heading level from H1 through H6.' };
+    }
+
+    if (!clientIds.length) {
+      return { ok: true, message: 'No checked heading blocks to change.' };
+    }
+
+    const targetIds = new Set(clientIds);
+    const headingBlocks = collectBlocks(getEditorBlocks(), (block) => {
+      return block.name === 'core/heading' && targetIds.has(block.clientId);
+    });
+
+    const changes = headingBlocks.map((block) => ({
+      fromLevel: getHeadingLevel(block),
+      text: getTextContentFromHtml(block.attributes?.content || 'Heading')
+    }));
+
+    headingBlocks.forEach((block) => {
+      window.wp.data.dispatch('core/block-editor').updateBlockAttributes(block.clientId, {
+        level: targetLevel
+      });
+    });
+
+    return {
+      ok: true,
+      message: 'Changed ' + headingBlocks.length + ' selected heading block' + (headingBlocks.length === 1 ? '' : 's') + ' to H' + targetLevel + '.',
+      details: changes.length
+        ? changes.map((change) => 'H' + change.fromLevel + ' -> H' + targetLevel + ': ' + change.text).join('\n')
+        : 'No matching checked heading blocks were found. Scan again if the editor content changed.'
+    };
+  }
+
   function applyH2FontSize(payload) {
     const fontSize = payload?.fontSize || '';
     const wsuFontSizeClass = /(?:^|\s)wsu-font-size--[^\s]+/g;
@@ -1316,6 +1421,9 @@
   const actions = {
     makeAllHeadingsH2,
     applyH2FontSize,
+    changeHeadingLevel,
+    scanHeadingBlocks,
+    changeSelectedHeadingBlocks,
     unboldHeadingBlocks,
     inspectSelectedBlock,
     scanLinkTextForTitles,

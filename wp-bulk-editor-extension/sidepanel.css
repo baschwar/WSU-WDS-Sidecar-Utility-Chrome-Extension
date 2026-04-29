@@ -11,7 +11,7 @@ body {
 }
 
 main {
-  padding: 10px;
+  padding: 8px;
 }
 
 header {
@@ -49,9 +49,9 @@ p {
 
 .panel {
   display: grid;
-  gap: 7px;
-  margin-bottom: 9px;
-  padding: 9px;
+  gap: 6px;
+  margin-bottom: 7px;
+  padding: 8px;
   border: 1px solid #d8dee8;
   border-radius: 8px;
   background: #ffffff;
@@ -64,8 +64,8 @@ p {
 
 .utility-card {
   display: grid;
-  gap: 6px;
-  padding: 7px;
+  gap: 5px;
+  padding: 6px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   background: #f8fafc;
@@ -100,7 +100,7 @@ label {
 select,
 input,
 button {
-  min-height: 28px;
+  min-height: 26px;
   border-radius: 6px;
   font: inherit;
   font-size: 12px;
@@ -311,6 +311,140 @@ button.link-button {
 
 @media (max-width: 340px) {
   .compact-card {
+    grid-template-columns: 1fr;
+  }
+}
+
+.h2-size-row {
+  grid-template-columns: auto minmax(78px, 104px) max-content max-content;
+}
+
+.h2-size-row select {
+  min-width: 78px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.h2-size-row button {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.alt-suggest-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.alt-suggest-row button {
+  flex: 0 0 auto;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.alt-suggest-row .compact-check {
+  min-width: 0;
+}
+
+.split-row {
+  grid-template-columns: auto minmax(52px, 64px) auto minmax(52px, 64px) max-content;
+}
+
+.split-row select {
+  min-width: 52px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.split-row button {
+  justify-self: end;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.heading-scan-row {
+  display: grid;
+  grid-template-columns: max-content auto minmax(52px, 64px) max-content;
+  align-items: center;
+  gap: 7px;
+}
+
+.heading-scan-row select {
+  min-width: 52px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.heading-scan-row button {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.compact-list {
+  max-height: 220px;
+  overflow: auto;
+}
+
+.heading-block-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+  padding: 6px 0;
+  border-top: 1px solid #e2e8f0;
+  color: #344054;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.heading-block-row:first-child {
+  border-top: 0;
+}
+
+.heading-block-row input {
+  min-height: 16px;
+  margin: 0;
+}
+
+.heading-block-row span {
+  overflow-wrap: anywhere;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.action-grid .utility-card {
+  min-width: 0;
+  padding: 6px;
+}
+
+.action-grid .compact-card {
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 5px;
+}
+
+.action-grid .tooltip-heading {
+  max-width: 100%;
+}
+
+.action-grid .tooltip-heading span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.action-grid .compact-card > button {
+  min-height: 24px;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+@media (max-width: 330px) {
+  .action-grid {
     grid-template-columns: 1fr;
   }
 }
