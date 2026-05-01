@@ -24,6 +24,7 @@ Important: after reloading or updating the extension, reload any open WordPress 
 ### Page/Post
 
 - Re-save visible Posts/Pages rows whose Accessibility column shows No Data so WordPress can regenerate accessibility checks on save.
+- Open every visible item from any WordPress `edit.php` list screen in new background tabs for batch review.
 - Preserve existing post status when saving drafts, pending posts, or published posts.
 
 ### Headings
@@ -94,4 +95,4 @@ Primary files:
 
 ## Version
 
-Current extension version: `0.12.0`.
+Current extension version: `0.13.0`.

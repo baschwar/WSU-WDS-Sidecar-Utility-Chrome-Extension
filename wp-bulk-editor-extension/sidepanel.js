@@ -16,6 +16,7 @@ const fixLeadingBoldLineButton = document.querySelector("#fix-leading-bold-line"
 const boldMaxCharsInput = document.querySelector("#bold-max-chars");
 const boldHeadingMaxWordsInput = document.querySelector("#bold-heading-max-words");
 const resaveNoDataButton = document.querySelector("#resave-no-data");
+const openVisibleListButton = document.querySelector("#open-visible-list");
 const makeHeadingsH2Button = document.querySelector("#make-headings-h2");
 const unboldHeadingBlocksButton = document.querySelector("#unbold-heading-blocks");
 const changeHeadingLevelButton = document.querySelector("#change-heading-level");
@@ -224,6 +225,48 @@ resaveNoDataButton.addEventListener("click", async () => {
     setDetails(String(error?.stack || error?.message || error));
   } finally {
     resaveNoDataButton.disabled = false;
+  }
+});
+
+openVisibleListButton.addEventListener("click", async () => {
+  openVisibleListButton.disabled = true;
+  setStatus("Scanning visible list rows...");
+  setDetails("");
+
+  try {
+    const listTab = await getActiveWordPressTab();
+
+    if (!isWordPressListUrl(listTab.url)) {
+      throw new Error("Open a WordPress list screen first, then run this utility.");
+    }
+
+    const scan = await runInTab(listTab, "scanVisibleListRows");
+    const items = scan.items || [];
+
+    if (!items.length) {
+      setStatus("No visible editable rows found.");
+      setDetails(scan.details || "Try increasing Screen Options items per page if more rows need opening.");
+      return;
+    }
+
+    for (const [index, item] of items.entries()) {
+      setStatus("Opening " + (index + 1) + " of " + items.length + "...");
+      setDetails("Opening: " + (item.title || item.url));
+      await chrome.tabs.create({
+        active: false,
+        index: (listTab.index || 0) + index + 1,
+        url: item.url
+      });
+      await delay(150);
+    }
+
+    setStatus("Opened " + items.length + " visible item" + (items.length === 1 ? "" : "s") + " in new tabs.");
+    setDetails(items.map((item) => item.title || item.url).join("\n"));
+  } catch (error) {
+    setStatus(error.message || "Could not open visible list items.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    openVisibleListButton.disabled = false;
   }
 });
 

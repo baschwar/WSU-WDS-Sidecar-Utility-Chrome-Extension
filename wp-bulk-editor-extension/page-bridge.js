@@ -1349,6 +1349,44 @@
     };
   }
 
+  function getVisibleListRows() {
+    const table = document.querySelector('.wp-list-table');
+
+    if (!table) {
+      return null;
+    }
+
+    return Array.from(table.querySelectorAll('tbody tr')).map((row) => {
+      const editLink = row.querySelector('a.row-title[href*="post.php"], .row-actions .edit a[href*="post.php"], a[href*="post.php"][href*="action=edit"]');
+
+      if (!editLink?.href) {
+        return null;
+      }
+
+      return {
+        title: (editLink.textContent || '').replace(/\s+/g, ' ').trim(),
+        url: editLink.href
+      };
+    }).filter(Boolean);
+  }
+
+  function scanVisibleListRows() {
+    const items = getVisibleListRows();
+
+    if (!items) {
+      return { ok: false, message: 'Open this on a WordPress list screen first.', items: [] };
+    }
+
+    return {
+      ok: true,
+      message: 'Found ' + items.length + ' visible editable item' + (items.length === 1 ? '' : 's') + '.',
+      items,
+      details: items.length
+        ? items.map((item) => item.title || item.url).join('\n')
+        : 'No visible editable rows were found on this list screen.'
+    };
+  }
+
   function waitForEditorSaveToFinish() {
     return new Promise((resolve) => {
       const editorSelect = window.wp?.data?.select('core/editor');
@@ -1437,6 +1475,7 @@
     convertShortAllBoldParagraphsToH2,
     splitLeadingBoldLineToH2,
     scanAccessibilityNoDataRows,
+    scanVisibleListRows,
     saveCurrentPostForAccessibilityRefresh
   };
 
