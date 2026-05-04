@@ -1295,6 +1295,57 @@
     };
   }
 
+  function getAccessibilityPanelText() {
+    const toggles = Array.from(document.querySelectorAll('.components-panel__body-toggle, .components-panel__body-title button, button'));
+    const accessibilityToggle = toggles.find((toggle) => {
+      return /accessibility\s*&\s*usability/i.test((toggle.textContent || '').replace(/\s+/g, ' '));
+    });
+    const panel = accessibilityToggle?.closest('.components-panel__body')
+      || accessibilityToggle?.parentElement?.closest('.components-panel__body')
+      || accessibilityToggle?.closest('[class*="panel"]');
+
+    if (panel) {
+      return (panel.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    const bodyText = (document.body?.textContent || '').replace(/\s+/g, ' ').trim();
+    const match = bodyText.match(/Accessibility\s*&\s*Usability[\s\S]{0,2500}/i);
+
+    return match?.[0] || '';
+  }
+
+  function scanVisibleAccessibilityIssues() {
+    const panelText = getAccessibilityPanelText();
+    const knownIssuePatterns = [
+      /missing page title/ig,
+      /links? with missing or invalid hrefs?/ig,
+      /linked image missing alt text/ig,
+      /links?\s+(?:is|are)?\s*set\s+to\s+open\s+in\s+a\s+new\s+tab/ig,
+      /links? with generic text/ig,
+      /incorrect heading order/ig,
+      /links? with urldefense\.com in the URL/ig,
+      /(?:link text containing the URL protocol|links? containing the URL protocol|URL protocol[^.]*link text)/ig,
+      /(?:link text containing a long URL|links? may contain a long URL|long URL[^.]*link text)/ig,
+      /images? missing alt text/ig,
+      /images? where alt text should be the destination/ig,
+      /paragraphs? (?:contains?|with) only bold(?:ed)? text/ig
+    ];
+    const issues = [];
+
+    knownIssuePatterns.forEach((pattern) => {
+      const matches = panelText.match(pattern) || [];
+      matches.forEach((match) => issues.push(match));
+    });
+
+    return {
+      ok: true,
+      message: 'Detected ' + issues.length + ' Accessibility & Usability issue text item' + (issues.length === 1 ? '' : 's') + '.',
+      issueText: panelText,
+      issueCount: issues.length,
+      issues: Array.from(new Set(issues))
+    };
+  }
+
   function getAccessibilityColumnIndex() {
     const headers = Array.from(document.querySelectorAll('.wp-list-table thead th, .wp-list-table thead td'));
     const index = headers.findIndex((header) => {
@@ -1476,6 +1527,7 @@
     splitLeadingBoldLineToH2,
     scanAccessibilityNoDataRows,
     scanVisibleListRows,
+    scanVisibleAccessibilityIssues,
     saveCurrentPostForAccessibilityRefresh
   };
 

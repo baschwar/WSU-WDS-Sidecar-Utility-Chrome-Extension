@@ -11,16 +11,21 @@
       <header>
         <h1>WSU WDS Sidecar</h1>
         <p>WordPress cleanup utilities.</p>
+        <div class="filter-bar">
+          <label class="compact-check"><input id="show-all-tools" type="checkbox" checked> Show all tools</label>
+          <button id="refresh-relevant-tools" class="secondary" type="button">Refresh</button>
+        </div>
+        <p id="filter-summary" class="filter-summary" hidden></p>
       </header>
 
       <section class="panel panel-primary">
         <h2>Page/Post</h2>
         <div class="action-grid">
-          <div class="utility-card compact-card">
+          <div class="utility-card compact-card" data-fixes="list no-data">
             <h3 class="tooltip-heading"><span>Update No Data</span><button class="tooltip-trigger" type="button" aria-label="Open visible Posts or Pages marked No Data in the Accessibility column and save them so WordPress can regenerate checks.">?</button><span class="tooltip-text" role="tooltip">Open visible Posts or Pages marked No Data in the Accessibility column and save them so WordPress can regenerate checks.</span></h3>
             <button id="resave-no-data" type="button">Run</button>
           </div>
-          <div class="utility-card compact-card">
+          <div class="utility-card compact-card" data-fixes="list open-list">
             <h3 class="tooltip-heading"><span>Open Visible List</span><button class="tooltip-trigger" type="button" aria-label="Open every visible item on the current WordPress list screen in a background tab.">?</button><span class="tooltip-text" role="tooltip">Open every visible item on the current WordPress list screen in a background tab.</span></h3>
             <button id="open-visible-list" type="button">Run</button>
           </div>
@@ -30,20 +35,20 @@
       <section class="panel">
         <h2>Headings</h2>
         <div class="action-grid">
-          <div class="utility-card compact-card">
+          <div class="utility-card compact-card" data-fixes="heading-order">
             <h3 class="tooltip-heading"><span>Fix Heading Order</span><button class="tooltip-trigger" type="button" aria-label="Change content heading blocks to H2 to clear incorrect heading order alerts. The post/page title is not touched.">?</button><span class="tooltip-text" role="tooltip">Change content heading blocks to H2 to clear incorrect heading order alerts. The post/page title is not touched.</span></h3>
             <button id="fix-heading-order" type="button">Run</button>
           </div>
-          <div class="utility-card compact-card">
+          <div class="utility-card compact-card" data-fixes="heading-order heading-level">
             <h3 class="tooltip-heading"><span>Make All H2</span><button class="tooltip-trigger" type="button" aria-label="Convert all content heading blocks to H2. The post/page title is not touched.">?</button><span class="tooltip-text" role="tooltip">Convert all content heading blocks to H2. The post/page title is not touched.</span></h3>
             <button id="make-headings-h2" type="button">Run</button>
           </div>
-          <div class="utility-card compact-card">
+          <div class="utility-card compact-card" data-fixes="bold-paragraph heading-bold">
             <h3 class="tooltip-heading"><span>Unbold Headings</span><button class="tooltip-trigger" type="button" aria-label="Remove bold markup from heading block text while preserving heading level and classes.">?</button><span class="tooltip-text" role="tooltip">Remove bold markup from heading block text while preserving heading level and classes.</span></h3>
             <button id="unbold-heading-blocks" type="button">Run</button>
           </div>
         </div>
-        <div class="utility-card">
+        <div class="utility-card" data-fixes="heading-order heading-level">
           <h3 class="tooltip-heading"><span>Change Heading Level</span><button class="tooltip-trigger" type="button" aria-label="Change all heading blocks of one selected level to another level while preserving content and classes.">?</button><span class="tooltip-text" role="tooltip">Change all heading blocks of one selected level to another level while preserving content and classes.</span></h3>
           <div class="rule-row split-row">
             <label for="heading-level-from">From</label>
@@ -67,7 +72,7 @@
             <button id="change-heading-level" type="button">Apply</button>
           </div>
         </div>
-        <div class="utility-card">
+        <div class="utility-card" data-fixes="heading-order heading-level">
           <h3 class="tooltip-heading"><span>Select Heading Blocks</span><button class="tooltip-trigger" type="button" aria-label="List individual heading blocks so selected items can be changed to a chosen heading level.">?</button><span class="tooltip-text" role="tooltip">List individual heading blocks so selected items can be changed to a chosen heading level.</span></h3>
           <div class="heading-scan-row">
             <button id="scan-heading-blocks" type="button">Scan</button>
@@ -87,7 +92,7 @@
             <button id="deselect-heading-blocks" class="secondary" type="button">Deselect</button>
           </div>
         </div>
-        <div class="utility-card">
+        <div class="utility-card" data-fixes="heading-order heading-level">
           <h3 class="tooltip-heading"><span>Set H2 Size</span><button class="tooltip-trigger" type="button" aria-label="Apply a WSU font-size class to every H2 block while preserving unrelated Advanced classes.">?</button><span class="tooltip-text" role="tooltip">Apply a WSU font-size class to every H2 block while preserving unrelated Advanced classes.</span></h3>
           <div class="rule-row h2-size-row">
             <label for="font-size">Make H2 =</label>
@@ -108,11 +113,11 @@
 
       <section class="panel">
         <h2>Alt Tags</h2>
-        <div class="utility-card compact-card">
+        <div class="utility-card compact-card" data-fixes="linked-image-alt image-alt destination-alt">
           <h3 class="tooltip-heading"><span>Set Linked Image Alt</span><button class="tooltip-trigger" type="button" aria-label="For images linked directly to image files, set alt text that describes the full-size file destination.">?</button><span class="tooltip-text" role="tooltip">For images linked directly to image files, set alt text that describes the full-size file destination.</span></h3>
           <button id="fix-linked-image-alt" type="button">Run</button>
         </div>
-        <div class="utility-card">
+        <div class="utility-card" data-fixes="image-alt linked-image-alt destination-alt">
           <h3 class="tooltip-heading"><span>Suggest Alt Text</span><button class="tooltip-trigger" type="button" aria-label="Scan image blocks with missing or suspicious alt text, generate editable suggestions, and apply only checked items.">?</button><span class="tooltip-text" role="tooltip">Scan image blocks with missing or suspicious alt text, generate editable suggestions, and apply only checked items.</span></h3>
           <div class="alt-suggest-row">
             <label class="compact-check"><input id="include-page-title-alt" type="checkbox" checked> Include page title</label>
@@ -129,19 +134,19 @@
       <section class="panel">
         <h2>Links</h2>
         <div class="action-grid">
-          <div class="utility-card compact-card">
+          <div class="utility-card compact-card" data-fixes="url-link-text long-url-link-text">
             <h3 class="tooltip-heading"><span>URL Link Text</span><button class="tooltip-trigger" type="button" aria-label="Find links whose visible text is a URL and replace that text with the linked page title.">?</button><span class="tooltip-text" role="tooltip">Find links whose visible text is a URL and replace that text with the linked page title.</span></h3>
             <button id="fix-url-link-text" type="button">Run</button>
           </div>
-          <div class="utility-card compact-card">
+          <div class="utility-card compact-card" data-fixes="generic-link-text">
             <h3 class="tooltip-heading"><span>Generic Link Text</span><button class="tooltip-trigger" type="button" aria-label="Find generic link text like here, click here, and read more, then replace it with the linked page title.">?</button><span class="tooltip-text" role="tooltip">Find generic link text like here, click here, and read more, then replace it with the linked page title.</span></h3>
             <button id="fix-generic-link-text" type="button">Run</button>
           </div>
-          <div class="utility-card compact-card">
+          <div class="utility-card compact-card" data-fixes="urldefense-link safelinks-link">
             <h3 class="tooltip-heading"><span>Tracked Links</span><button class="tooltip-trigger" type="button" aria-label="Replace URLDefense and Outlook Safe Links wrapper URLs with the decoded original destination URL.">?</button><span class="tooltip-text" role="tooltip">Replace URLDefense and Outlook Safe Links wrapper URLs with the decoded original destination URL.</span></h3>
             <button id="fix-urldefense-links" type="button">Run</button>
           </div>
-          <div class="utility-card compact-card">
+          <div class="utility-card compact-card" data-fixes="new-tab-link">
             <h3 class="tooltip-heading"><span>New-Tab Links</span><button class="tooltip-trigger" type="button" aria-label="Remove open-in-new-tab behavior from rich text links while preserving other link settings.">?</button><span class="tooltip-text" role="tooltip">Remove open-in-new-tab behavior from rich text links while preserving other link settings.</span></h3>
             <button id="fix-new-tab-links" type="button">Run</button>
           </div>
@@ -150,7 +155,7 @@
 
       <section class="panel">
         <h2>Text Cleanup</h2>
-        <div class="utility-card">
+        <div class="utility-card" data-fixes="bold-paragraph">
           <h3 class="tooltip-heading"><span>Bold Paragraph Fixes</span><button class="tooltip-trigger" type="button" aria-label="Fix paragraphs that are entirely bold, including converting short bold lines into H2 headings when appropriate.">?</button><span class="tooltip-text" role="tooltip">Fix paragraphs that are entirely bold, including converting short bold lines into H2 headings when appropriate.</span></h3>
           <div class="rule-row">
             <label for="bold-max-chars">Unbold all-bold paragraphs over</label>

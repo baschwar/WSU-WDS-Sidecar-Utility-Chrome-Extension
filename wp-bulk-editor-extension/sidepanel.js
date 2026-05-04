@@ -31,6 +31,9 @@ const headingBlockActionsEl = document.querySelector("#heading-block-actions");
 const applyButton = document.querySelector("#apply-h2");
 const inspectButton = document.querySelector("#inspect-block");
 const fontSizeSelect = document.querySelector("#font-size");
+const showAllToolsInput = document.querySelector("#show-all-tools");
+const refreshRelevantToolsButton = document.querySelector("#refresh-relevant-tools");
+const filterSummaryEl = document.querySelector("#filter-summary");
 const feedbackEl = document.querySelector("#feedback");
 const statusEl = document.querySelector("#status");
 const detailsEl = document.querySelector("#details");
@@ -38,6 +41,102 @@ const detailsEl = document.querySelector("#details");
 const SIZE_VALUES = ["Medium", "xMedium", "xxMedium", "Large", "xLarge", "xxLarge"];
 let currentAltSuggestions = [];
 let currentHeadingBlocks = [];
+
+const ISSUE_FIX_RULES = [
+  { pattern: /links?\s+(?:is|are)?\s*set\s+to\s+open\s+in\s+a\s+new\s+tab/i, fixes: ["new-tab-link"] },
+  { pattern: /links?\s+with\s+generic\s+text/i, fixes: ["generic-link-text"] },
+  { pattern: /incorrect\s+heading\s+order/i, fixes: ["heading-order", "heading-level"] },
+  { pattern: /urldefense\.com/i, fixes: ["urldefense-link"] },
+  { pattern: /safelinks\.protection\.outlook\.com/i, fixes: ["safelinks-link"] },
+  { pattern: /(?:link\s+text\s+containing\s+the\s+url\s+protocol|links?\s+containing\s+the\s+url\s+protocol|url\s+protocol[^.]*link\s+text)/i, fixes: ["url-link-text"] },
+  { pattern: /(?:link\s+text\s+containing\s+a\s+long\s+url|links?\s+may\s+contain\s+a\s+long\s+url|long\s+url[^.]*link\s+text)/i, fixes: ["long-url-link-text", "url-link-text"] },
+  { pattern: /linked\s+image\s+missing\s+alt\s+text/i, fixes: ["linked-image-alt", "image-alt"] },
+  { pattern: /images?\s+missing\s+alt\s+text/i, fixes: ["image-alt"] },
+  { pattern: /images?\s+where\s+alt\s+text\s+should\s+be\s+the\s+destination/i, fixes: ["destination-alt", "linked-image-alt"] },
+  { pattern: /paragraphs?\s+(?:contains?|with)\s+only\s+bold(?:ed)?\s+text/i, fixes: ["bold-paragraph"] }
+];
+
+function getToolCards() {
+  return Array.from(document.querySelectorAll(".utility-card[data-fixes]"));
+}
+
+function getDetectedFixes(issueText) {
+  const fixes = new Set();
+
+  ISSUE_FIX_RULES.forEach((rule) => {
+    if (rule.pattern.test(issueText)) {
+      rule.fixes.forEach((fix) => fixes.add(fix));
+    }
+  });
+
+  return fixes;
+}
+
+function setFilterSummary(message) {
+  filterSummaryEl.hidden = !message;
+  filterSummaryEl.textContent = message || "";
+}
+
+function showAllToolCards() {
+  getToolCards().forEach((card) => card.removeAttribute("hidden-by-filter"));
+  Array.from(document.querySelectorAll("section.panel")).forEach((panel) => panel.removeAttribute("hidden-by-filter"));
+  setFilterSummary("");
+}
+
+function applyToolFilter(fixes, issueCount = 0) {
+  const cards = getToolCards();
+  let visibleCount = 0;
+
+  cards.forEach((card) => {
+    const cardFixes = (card.dataset.fixes || "").split(/\s+/).filter(Boolean);
+    const shouldShow = cardFixes.some((fix) => fixes.has(fix));
+
+    card.toggleAttribute("hidden-by-filter", !shouldShow);
+    if (shouldShow) {
+      visibleCount += 1;
+    }
+  });
+
+  Array.from(document.querySelectorAll("section.panel")).forEach((panel) => {
+    const panelCards = Array.from(panel.querySelectorAll(".utility-card[data-fixes]"));
+    const hasVisibleCard = panelCards.some((card) => !card.hasAttribute("hidden-by-filter"));
+
+    panel.toggleAttribute("hidden-by-filter", panelCards.length > 0 && !hasVisibleCard);
+  });
+
+  if (!issueCount) {
+    setFilterSummary("No visible Accessibility & Usability issues detected. Turn Show all tools back on if needed.");
+  } else if (!visibleCount) {
+    setFilterSummary("Detected " + issueCount + " issue text item" + (issueCount === 1 ? "" : "s") + ", but no matching sidecar tools yet.");
+  } else {
+    setFilterSummary("Showing " + visibleCount + " relevant tool" + (visibleCount === 1 ? "" : "s") + " for " + issueCount + " detected issue text item" + (issueCount === 1 ? "" : "s") + ".");
+  }
+}
+
+async function refreshRelevantTools() {
+  if (showAllToolsInput.checked) {
+    showAllToolCards();
+    return;
+  }
+
+  refreshRelevantToolsButton.disabled = true;
+  setFilterSummary("Scanning Accessibility & Usability panel...");
+
+  try {
+    const response = await runInEditorTab("scanVisibleAccessibilityIssues");
+    const issueText = response.issueText || "";
+    const fixes = getDetectedFixes(issueText);
+
+    applyToolFilter(fixes, response.issueCount || 0);
+  } catch (error) {
+    showAllToolCards();
+    showAllToolsInput.checked = true;
+    setFilterSummary("Could not scan Accessibility & Usability issues. Showing all tools.");
+    setDetails(String(error?.stack || error?.message || error));
+  } finally {
+    refreshRelevantToolsButton.disabled = false;
+  }
+}
 
 function moveFeedbackToButton(button) {
   if (button.closest('.tooltip-heading') || button.classList.contains('tooltip-trigger')) {
@@ -53,6 +152,10 @@ function moveFeedbackToButton(button) {
   card.appendChild(feedbackEl);
   feedbackEl.hidden = false;
 }
+
+showAllToolsInput.addEventListener("change", refreshRelevantTools);
+refreshRelevantToolsButton.addEventListener("click", refreshRelevantTools);
+showAllToolCards();
 
 document.addEventListener('click', (event) => {
   const button = event.target.closest('button');

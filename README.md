@@ -62,6 +62,7 @@ Important: after reloading or updating the extension, reload any open WordPress 
 - Show status/details under the active utility card.
 - Provide compact controls and hover/focus help for utility headings.
 - Use compact two-column action grids for simple Heading and Link cleanup utilities.
+- Filter the sidecar to tools relevant to visible Accessibility & Usability checker issues, with a default-on Show all tools toggle.
 
 ## How It Works
 
@@ -95,4 +96,4 @@ Primary files:
 
 ## Version
 
-Current extension version: `0.13.0`.
+Current extension version: `0.14.0`.
